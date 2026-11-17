@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCKS_PER_DAY,
+  computeBlocksForTimeRange,
   computeDayOverview,
   DEFAULT_CATEGORIES,
   formatBlockRange,
@@ -14,6 +15,7 @@ import {
   groupBlocksByHour,
   HOURS_PER_DAY,
   parseDateKey,
+  parseTimeToMinutes,
   shiftDateKey,
 } from '../utils/timeBlocks';
 
@@ -127,5 +129,48 @@ describe('timeBlocks utilities', () => {
       blockCount: 3,
       minutes: 30,
     });
+  });
+
+  it('parses time strings to minutes from midnight', () => {
+    expect(parseTimeToMinutes('00:00')).toBe(0);
+    expect(parseTimeToMinutes('01:30')).toBe(90);
+    expect(parseTimeToMinutes('12:15')).toBe(735);
+    expect(parseTimeToMinutes('23:59')).toBe(1439);
+    expect(parseTimeToMinutes('invalid')).toBe(0);
+  });
+
+  it('computes block indices for within-day time ranges', () => {
+    // 09:00 (540m -> block 54) to 11:00 (660m -> block 65 inclusive, 12 blocks total)
+    const morningWork = computeBlocksForTimeRange('09:00', '11:00');
+    expect(morningWork).toHaveLength(12);
+    expect(morningWork[0]).toBe(54);
+    expect(morningWork[morningWork.length - 1]).toBe(65);
+
+    // Single 10m block
+    const single = computeBlocksForTimeRange('14:00', '14:10');
+    expect(single).toEqual([84]);
+
+    // Same start and end -> 0 blocks
+    expect(computeBlocksForTimeRange('10:00', '10:00')).toEqual([]);
+  });
+
+  it('computes block indices seamlessly crossing midnight', () => {
+    // 23:00 to 07:00
+    // Evening: 23:00..24:00 -> blocks 138..143 (6 blocks)
+    // Morning: 00:00..07:00 -> blocks 0..41 (42 blocks)
+    // Total = 48 blocks (8 hours)
+    const sleepBlocks = computeBlocksForTimeRange('23:00', '07:00');
+    expect(sleepBlocks).toHaveLength(48);
+    expect(sleepBlocks[0]).toBe(0);
+    expect(sleepBlocks[41]).toBe(41);
+    expect(sleepBlocks[42]).toBe(138);
+    expect(sleepBlocks[47]).toBe(143);
+
+    // 22:30 to 06:30 -> 8 hours = 48 blocks
+    const sleepBlocks2 = computeBlocksForTimeRange('22:30', '06:30');
+    expect(sleepBlocks2).toHaveLength(48);
+    expect(sleepBlocks2.includes(135)).toBe(true); // 22:30 is block 135
+    expect(sleepBlocks2.includes(38)).toBe(true);  // 06:20..06:30 is block 38
+    expect(sleepBlocks2.includes(39)).toBe(false); // 06:30 wake time
   });
 });

@@ -95,19 +95,58 @@ describe('BlockAir App integration', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // Pre-fill night sleep on today
-    const prefillBtn = screen.getByRole('button', { name: /Pre-fill Night Sleep/i });
-    await user.click(prefillBtn);
-    expect(screen.getByText('31% mapped')).toBeInTheDocument();
+    // Open Sleep Prefill dialog and apply default sleep (23:00 to 07:00 = 48 blocks = 33%)
+    const openSleepBtn = screen.getByRole('button', { name: /Pre-fill Sleep/i });
+    await user.click(openSleepBtn);
+
+    const applySleepBtn = screen.getByRole('button', { name: /Fill Sleep \(48 Blocks\)/i });
+    await user.click(applySleepBtn);
+    expect(screen.getByText('33% mapped')).toBeInTheDocument();
 
     // Navigate to previous day -> should be empty (0% mapped)
     const prevDayBtn = screen.getByRole('button', { name: /Previous day/i });
     await user.click(prevDayBtn);
     expect(screen.getByText('0% mapped')).toBeInTheDocument();
 
-    // Return to Today -> 31% mapped is still intact
+    // Return to Today -> 33% mapped is still intact
     const todayBtn = screen.getByRole('button', { name: /^Today$/i });
     await user.click(todayBtn);
-    expect(screen.getByText('31% mapped')).toBeInTheDocument();
+    expect(screen.getByText('33% mapped')).toBeInTheDocument();
+  });
+
+  it('allows customizing bedtime and wake time in the sleep prefill modal', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Open Sleep Prefill modal
+    const openSleepBtn = screen.getByRole('button', { name: /Pre-fill Sleep/i });
+    await user.click(openSleepBtn);
+
+    // Click 22:00 bedtime preset and 06:00 wake time preset
+    // 22:00 to 24:00 (12 blocks) + 00:00 to 06:00 (36 blocks) = 48 blocks (8h)
+    const bedtime2200 = screen.getByRole('button', { name: '22:00' });
+    const wake0600 = screen.getByRole('button', { name: '06:00' });
+    await user.click(bedtime2200);
+    await user.click(wake0600);
+
+    expect(screen.getByText(/22:00 → 06:00/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Fill Sleep \(48 Blocks\)/i })).toBeInTheDocument();
+
+    // Submit the modal
+    const submitBtn = screen.getByRole('button', { name: /Fill Sleep \(48 Blocks\)/i });
+    await user.click(submitBtn);
+
+    // Verify first hour of sleep (22:00) is marked as sleep
+    expect(
+      screen.getByRole('button', {
+        name: /Block 22:00 to 22:10, Sleep, Night sleep/i,
+      })
+    ).toBeInTheDocument();
+    // And waking block (06:00) is unassigned
+    expect(
+      screen.getByRole('button', {
+        name: /Block 06:00 to 06:10, Unassigned/i,
+      })
+    ).toBeInTheDocument();
   });
 });

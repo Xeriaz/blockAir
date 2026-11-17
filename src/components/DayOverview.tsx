@@ -6,6 +6,7 @@ import {
   getCategoryMap,
   MINUTES_PER_BLOCK,
 } from '../utils/timeBlocks';
+import { SleepPrefillModal } from './SleepPrefillModal';
 
 interface DayOverviewProps {
   stats: DayOverviewStats;
@@ -15,7 +16,12 @@ interface DayOverviewProps {
   highlightedCategoryId: string | null;
   onHighlightCategory: (categoryId: string | null) => void;
   onReflectionChange: (value: string) => void;
-  onFillNightSleep: () => void;
+  onFillCustomSleep: (options: {
+    startTime: string;
+    endTime: string;
+    overwriteExisting: boolean;
+    label: string;
+  }) => void;
   onClearEntireDay: () => void;
 }
 
@@ -27,10 +33,11 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
   highlightedCategoryId,
   onHighlightCategory,
   onReflectionChange,
-  onFillNightSleep,
+  onFillCustomSleep,
   onClearEntireDay,
 }) => {
   const [confirmClearDay, setConfirmClearDay] = useState(false);
+  const [isSleepModalOpen, setIsSleepModalOpen] = useState(false);
   const categoryMap = getCategoryMap(categories);
 
   const remainingTodayBlocks =
@@ -100,11 +107,14 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
           <div className="empty-overview-state">
             <p className="empty-title">No blocks logged for this day yet.</p>
             <p className="empty-copy">
-              Select blocks in the grid to record how your time was spent, or pre-fill night sleep
-              (00:00–06:00 &amp; 22:40–24:00).
+              Select blocks in the grid to record your time, or pre-fill your sleep schedule.
             </p>
-            <button type="button" className="secondary-btn" onClick={onFillNightSleep}>
-              Pre-fill Night Sleep (44 blocks)
+            <button
+              type="button"
+              className="secondary-btn"
+              onClick={() => setIsSleepModalOpen(true)}
+            >
+              🌙 Pre-fill Sleep...
             </button>
           </div>
         ) : (
@@ -182,8 +192,12 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
             )}
 
             <div className="day-quick-actions">
-              <button type="button" className="secondary-btn" onClick={onFillNightSleep}>
-                Fill Unassigned Night Sleep
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => setIsSleepModalOpen(true)}
+              >
+                🌙 Pre-fill Sleep...
               </button>
 
               {!confirmClearDay ? (
@@ -237,6 +251,12 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
           onChange={(e) => onReflectionChange(e.target.value)}
         />
       </div>
+
+      <SleepPrefillModal
+        isOpen={isSleepModalOpen}
+        onClose={() => setIsSleepModalOpen(false)}
+        onApplySleep={onFillCustomSleep}
+      />
     </aside>
   );
 };

@@ -1,5 +1,5 @@
 import type { AppDataStore, BlockEntry, DayRecord } from '../types/blockair';
-import { BLOCKS_PER_DAY } from './timeBlocks';
+import { BLOCKS_PER_DAY, computeBlocksForTimeRange } from './timeBlocks';
 
 export const STORAGE_KEY = 'blockair:v1:store';
 export const STORE_VERSION = 1;
@@ -237,6 +237,50 @@ export function setDayReflection(
 }
 
 /**
+ * Fills sleep blocks between selectable start and end times (e.g. 23:00 to 07:00).
+ */
+export function fillCustomSleepBlocks(
+  store: AppDataStore,
+  dateKey: string,
+  startTime: string,
+  endTime: string,
+  overwriteExisting = false,
+  label = 'Night sleep'
+): { updatedStore: AppDataStore; filledCount: number; totalCount: number } {
+  const targetIndices = computeBlocksForTimeRange(startTime, endTime);
+  const existingDay = store.days[dateKey] ?? { dateKey, blocks: {} };
+  const nextBlocks: Record<number, BlockEntry> = { ...existingDay.blocks };
+  const now = Date.now();
+  let filledCount = 0;
+
+  for (const idx of targetIndices) {
+    if (!overwriteExisting && nextBlocks[idx]) continue;
+    nextBlocks[idx] = {
+      categoryId: 'sleep',
+      label: label.trim() || 'Sleep',
+      updatedAt: now,
+    };
+    filledCount += 1;
+  }
+
+  return {
+    updatedStore: {
+      ...store,
+      days: {
+        ...store.days,
+        [dateKey]: {
+          ...existingDay,
+          dateKey,
+          blocks: nextBlocks,
+        },
+      },
+    },
+    filledCount,
+    totalCount: targetIndices.length,
+  };
+}
+
+/**
  * Fills common sleep blocks (00:00–06:00 and 22:40–24:00 = 44 blocks) without overwriting already logged blocks.
  */
 export function fillNightSleepBlocks(
@@ -244,34 +288,6 @@ export function fillNightSleepBlocks(
   dateKey: string,
   overwriteExisting = false
 ): AppDataStore {
-  const existingDay = store.days[dateKey] ?? { dateKey, blocks: {} };
-  const nextBlocks: Record<number, BlockEntry> = { ...existingDay.blocks };
-  const now = Date.now();
-
-  // 00:00-06:00 (0..35) and 22:40-24:00 (136..143) => 44 sleep blocks
-  const sleepIndices = [
-    ...Array.from({ length: 36 }, (_, i) => i),
-    ...Array.from({ length: 8 }, (_, i) => 136 + i),
-  ];
-
-  for (const idx of sleepIndices) {
-    if (!overwriteExisting && nextBlocks[idx]) continue;
-    nextBlocks[idx] = {
-      categoryId: 'sleep',
-      label: 'Night sleep',
-      updatedAt: now,
-    };
-  }
-
-  return {
-    ...store,
-    days: {
-      ...store.days,
-      [dateKey]: {
-        ...existingDay,
-        dateKey,
-        blocks: nextBlocks,
-      },
-    },
-  };
+  return fillCustomSleepBlocks(store, dateKey, '22:40', '06:00', overwriteExisting, 'Night sleep')
+    .updatedStore;
 }

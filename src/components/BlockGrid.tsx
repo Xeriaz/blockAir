@@ -118,16 +118,28 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
       <div className={`hour-rows mode-${interactionTool}`} ref={gridRef}>
         {hourGroups.map((group) => {
           const isHourSelected = group.blockIndices.every((idx) => selectedSet.has(idx));
+          const isCurrentHour =
+            currentBlockIndex !== null && group.blockIndices.includes(currentBlockIndex);
+
           return (
             <div key={group.hour} className="hour-row">
               <button
                 type="button"
-                className={`hour-label-btn ${isHourSelected ? 'is-selected' : ''}`}
+                className={`hour-label-btn ${isHourSelected ? 'is-selected' : ''} ${isCurrentHour ? 'is-current-hour' : ''}`}
                 onClick={() => onSelectHourRow(group.blockIndices)}
                 title={`Select full hour ${group.hourLabel}`}
                 aria-label={`Select hour ${group.hourLabel}`}
               >
-                <span className="hour-time">{group.hourLabel}</span>
+                <div className="hour-time-row">
+                  <span className="hour-time">{group.hourLabel}</span>
+                  {isCurrentHour && (
+                    <span
+                      className="hour-live-indicator"
+                      title="Current hour"
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
                 <span className="hour-period">{group.periodLabel}</span>
               </button>
 
@@ -208,8 +220,9 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
                       <span className="block-top-meta">
                         <span className="block-time-tiny">{range.start}</span>
                         {isCurrentNow && (
-                          <span className="now-dot" title="Current 10m block">
-                            NOW
+                          <span className="now-badge" title="Current 10m block">
+                            <span className="now-pulse-core" aria-hidden="true" />
+                            <span className="now-text">NOW</span>
                           </span>
                         )}
                         {isRangeAnchor && (

@@ -3,6 +3,7 @@ import {
   assignBlocksInDay,
   clearBlocksInDay,
   createEmptyStore,
+  fillCustomSleepBlocks,
   fillNightSleepBlocks,
   loadStore,
   saveStore,
@@ -57,6 +58,37 @@ describe('storage persistence utilities', () => {
     expect(blocks[35].categoryId).toBe('sleep');
     expect(blocks[36]).toBeUndefined(); // 06:00 waking start
     expect(blocks[136].categoryId).toBe('sleep'); // 22:40 sleep start
+  });
+
+  it('fills custom sleep blocks with specified start and end times and supports overwrite', () => {
+    let store = createEmptyStore();
+    // Pre-assign block 140 (23:20) with deep work
+    store = assignBlocksInDay(store, '2026-11-17', [140], {
+      categoryId: 'deep-work',
+      label: 'Midnight coding',
+    });
+
+    // Fill sleep 23:00 to 07:00 (48 blocks), keeping existing
+    const res1 = fillCustomSleepBlocks(store, '2026-11-17', '23:00', '07:00', false, 'Night rest');
+    expect(res1.filledCount).toBe(47); // 48 - 1 already assigned
+    expect(res1.totalCount).toBe(48);
+    store = res1.updatedStore;
+
+    let dayBlocks = store.days['2026-11-17'].blocks;
+    expect(Object.keys(dayBlocks)).toHaveLength(48);
+    // Block 140 retained its deep-work activity
+    expect(dayBlocks[140].categoryId).toBe('deep-work');
+    expect(dayBlocks[138].categoryId).toBe('sleep');
+    expect(dayBlocks[138].label).toBe('Night rest');
+
+    // Now fill with overwrite = true
+    const res2 = fillCustomSleepBlocks(store, '2026-11-17', '23:00', '07:00', true, 'Full sleep');
+    expect(res2.filledCount).toBe(48);
+    store = res2.updatedStore;
+
+    dayBlocks = store.days['2026-11-17'].blocks;
+    expect(dayBlocks[140].categoryId).toBe('sleep');
+    expect(dayBlocks[140].label).toBe('Full sleep');
   });
 
   it('recovers gracefully when localStorage contains malformed JSON or out-of-range block keys', () => {

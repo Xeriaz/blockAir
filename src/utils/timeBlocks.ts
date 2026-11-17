@@ -244,6 +244,57 @@ export function formatDurationMinutes(totalMinutes: number): string {
 }
 
 /**
+ * Parses an HH:MM 24-hour time string into total minutes since midnight (0..1440).
+ */
+export function parseTimeToMinutes(timeStr: string): number {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(timeStr.trim());
+  if (!match) return 0;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return 0;
+  return Math.max(0, Math.min(1440, hours * 60 + minutes));
+}
+
+/**
+ * Returns block indices (0..143) covered by a time interval (startTime to endTime).
+ * - If startTime < endTime (e.g. 01:00 to 08:00), returns blocks in [startTime, endTime).
+ * - If startTime > endTime (e.g. 23:00 to 07:00, crossing midnight),
+ *   returns evening blocks [startTime, 24:00) PLUS morning blocks [00:00, endTime).
+ */
+export function computeBlocksForTimeRange(startTime: string, endTime: string): number[] {
+  const startMins = parseTimeToMinutes(startTime);
+  const endMins = parseTimeToMinutes(endTime);
+  const indices: number[] = [];
+
+  if (startMins === endMins) {
+    if (startMins === 0 || startMins === 1440) {
+      return Array.from({ length: BLOCKS_PER_DAY }, (_, i) => i);
+    }
+    return [];
+  }
+
+  if (startMins < endMins) {
+    const startBlock = Math.floor(startMins / MINUTES_PER_BLOCK);
+    const endBlock = Math.ceil(endMins / MINUTES_PER_BLOCK);
+    for (let i = startBlock; i < endBlock && i < BLOCKS_PER_DAY; i++) {
+      indices.push(i);
+    }
+  } else {
+    // Crosses midnight (e.g. 23:00 to 07:00)
+    const eveningStartBlock = Math.floor(startMins / MINUTES_PER_BLOCK);
+    for (let i = eveningStartBlock; i < BLOCKS_PER_DAY; i++) {
+      indices.push(i);
+    }
+    const morningEndBlock = Math.ceil(endMins / MINUTES_PER_BLOCK);
+    for (let i = 0; i < morningEndBlock && i < BLOCKS_PER_DAY; i++) {
+      indices.push(i);
+    }
+  }
+
+  return Array.from(new Set(indices)).sort((a, b) => a - b);
+}
+
+/**
  * Computes the active 10-minute block index (0..143) for a given Date.
  */
 export function getCurrentBlockIndex(now: Date = new Date()): number {

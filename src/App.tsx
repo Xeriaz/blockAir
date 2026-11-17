@@ -7,7 +7,7 @@ import type { AppDataStore } from './types/blockair';
 import {
   assignBlocksInDay,
   clearBlocksInDay,
-  fillNightSleepBlocks,
+  fillCustomSleepBlocks,
   loadStore,
   saveStore,
   setDayReflection,
@@ -243,9 +243,25 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleFillNightSleep = () => {
-    setStore((prev) => fillNightSleepBlocks(prev, selectedDateKey, false));
-    announceFeedback('Filled unassigned night sleep blocks (00:00–06:00 & 22:40–24:00)');
+  const handleFillCustomSleep = (options: {
+    startTime: string;
+    endTime: string;
+    overwriteExisting: boolean;
+    label: string;
+  }) => {
+    const result = fillCustomSleepBlocks(
+      store,
+      selectedDateKey,
+      options.startTime,
+      options.endTime,
+      options.overwriteExisting,
+      options.label
+    );
+    setStore(result.updatedStore);
+    const dur = formatDurationMinutes(result.filledCount * MINUTES_PER_BLOCK);
+    announceFeedback(
+      `Pre-filled ${result.filledCount} sleep blocks (${dur}) for ${options.startTime}–${options.endTime}`
+    );
   };
 
   const handleClearEntireDay = () => {
@@ -371,7 +387,7 @@ export const App: React.FC = () => {
           onReflectionChange={(val) =>
             setStore((prev) => setDayReflection(prev, selectedDateKey, val))
           }
-          onFillNightSleep={handleFillNightSleep}
+          onFillCustomSleep={handleFillCustomSleep}
           onClearEntireDay={handleClearEntireDay}
         />
       </main>
