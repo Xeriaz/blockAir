@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Configurable deployment target branch and remote.
-# Override via environment variables or first CLI argument:
-#   DEPLOY_BRANCH=prod npm run deploy
-#   npm run deploy -- prod
-DEPLOY_BRANCH="${1:-${DEPLOY_BRANCH:-gh-pages}}"
+# Default deployment branch is 'prod'.
+# Override via environment variable or first CLI argument:
+#   DEPLOY_BRANCH=gh-pages npm run deploy
+#   npm run deploy -- gh-pages
+DEPLOY_BRANCH="${1:-${DEPLOY_BRANCH:-prod}}"
 DEPLOY_REMOTE="${DEPLOY_REMOTE:-origin}"
 DIST_DIR="${DIST_DIR:-dist}"
 
@@ -31,13 +31,13 @@ else
   git worktree add --detach --orphan "$TMP_WORKTREE"
 fi
 
-# Clear any tracked/untracked files inside the detached worktree (preserving .git reference)
+# Clear all existing files inside the detached worktree except the .git pointer
 find "$TMP_WORKTREE" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
 
 # Copy built production assets from dist/ into the worktree
 cp -R "$DIST_DIR"/. "$TMP_WORKTREE"/
 
-# Add .nojekyll so GitHub Pages serves all files unaltered
+# Include .nojekyll so static hosts serve all files unaltered
 touch "$TMP_WORKTREE/.nojekyll"
 
 (

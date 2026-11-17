@@ -172,6 +172,19 @@ export function pad2(num: number): string {
   return String(num).padStart(2, '0');
 }
 
+/**
+ * Formats a Date object as a strict 24-hour clock string (HH:MM or HH:MM:SS), never 12h AM/PM.
+ */
+export function formatClock24h(date: Date, includeSeconds = false): string {
+  const hours = pad2(date.getHours());
+  const minutes = pad2(date.getMinutes());
+  if (!includeSeconds) {
+    return `${hours}:${minutes}`;
+  }
+  const seconds = pad2(date.getSeconds());
+  return `${hours}:${minutes}:${seconds}`;
+}
+
 export function minutesToTimeLabel(totalMinutes: number): string {
   const clamped = Math.max(0, Math.min(1440, totalMinutes));
   if (clamped === 1440) return '24:00';

@@ -17,6 +17,7 @@ import {
   BLOCKS_PER_DAY,
   computeDayOverview,
   DEFAULT_CATEGORIES,
+  formatClock24h,
   formatDateKey,
   formatDurationMinutes,
   getCategoryMap,
@@ -35,6 +36,7 @@ export const App: React.FC = () => {
   const [store, setStore] = useState<AppDataStore>(() => loadStore());
   const [todayDateKey, setTodayDateKey] = useState<string>(() => formatDateKey(new Date()));
   const [selectedDateKey, setSelectedDateKey] = useState<string>(() => formatDateKey(new Date()));
+  const [clock24h, setClock24h] = useState<string>(() => formatClock24h(new Date()));
   const [currentBlockIndex, setCurrentBlockIndex] = useState<number>(() =>
     getCurrentBlockIndex(new Date())
   );
@@ -67,8 +69,9 @@ export const App: React.FC = () => {
     const interval = window.setInterval(() => {
       const now = new Date();
       setTodayDateKey(formatDateKey(now));
+      setClock24h(formatClock24h(now));
       setCurrentBlockIndex(getCurrentBlockIndex(now));
-    }, 30_000);
+    }, 10_000);
     return () => window.clearInterval(interval);
   }, []);
 
@@ -255,6 +258,8 @@ export const App: React.FC = () => {
       <DateNavigator
         selectedDateKey={selectedDateKey}
         todayDateKey={todayDateKey}
+        clock24h={clock24h}
+        currentBlockIndex={currentBlockIndex}
         viewMode={viewMode}
         onSelectDate={handleSelectDate}
         onShiftDate={handleShiftDate}

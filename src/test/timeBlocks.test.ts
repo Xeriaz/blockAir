@@ -4,6 +4,7 @@ import {
   computeDayOverview,
   DEFAULT_CATEGORIES,
   formatBlockRange,
+  formatClock24h,
   formatDateKey,
   formatDurationMinutes,
   formatHumanDate,
@@ -19,6 +20,12 @@ import {
 } from '../utils/timeBlocks';
 
 describe('timeBlocks utilities', () => {
+  it('formats 24-hour clock times strictly without AM/PM', () => {
+    expect(formatClock24h(new Date(2026, 10, 17, 0, 5, 9))).toBe('00:05');
+    expect(formatClock24h(new Date(2026, 10, 17, 20, 32, 8))).toBe('20:32');
+    expect(formatClock24h(new Date(2026, 10, 17, 20, 32, 8), true)).toBe('20:32:08');
+  });
+
   it('computes accurate 10-minute time ranges across 144 blocks', () => {
     const first = getBlockTimeRange(0);
     expect(first.start).toBe('00:00');

@@ -1,10 +1,12 @@
 import React from 'react';
 import type { GridViewMode } from '../types/blockair';
-import { formatHumanDate } from '../utils/timeBlocks';
+import { formatHumanDate, getBlockTimeRange } from '../utils/timeBlocks';
 
 interface DateNavigatorProps {
   selectedDateKey: string;
   todayDateKey: string;
+  clock24h: string;
+  currentBlockIndex: number;
   viewMode: GridViewMode;
   onSelectDate: (dateKey: string) => void;
   onShiftDate: (deltaDays: number) => void;
@@ -14,6 +16,8 @@ interface DateNavigatorProps {
 export const DateNavigator: React.FC<DateNavigatorProps> = ({
   selectedDateKey,
   todayDateKey,
+  clock24h,
+  currentBlockIndex,
   viewMode,
   onSelectDate,
   onShiftDate,
@@ -23,29 +27,42 @@ export const DateNavigator: React.FC<DateNavigatorProps> = ({
     selectedDateKey,
     todayDateKey
   );
+  const activeRange = getBlockTimeRange(currentBlockIndex);
 
   return (
     <header className="top-bar">
-      <div className="brand-group">
-        <div className="brand-logo" aria-hidden="true">
-          <span className="logo-cell c1" />
-          <span className="logo-cell c2" />
-          <span className="logo-cell c3" />
-          <span className="logo-cell c2" />
-          <span className="logo-cell c4" />
-          <span className="logo-cell c5" />
-          <span className="logo-cell c5" />
-          <span className="logo-cell c6" />
-          <span className="logo-cell c7" />
-        </div>
-        <div>
-          <div className="brand-title-row">
-            <h1 className="brand-title">BlockAir</h1>
-            <span className="brand-pill">10m × 144</span>
+      <div className="brand-row-top">
+        <div className="brand-group">
+          <div className="brand-logo" aria-hidden="true">
+            <span className="logo-cell c1" />
+            <span className="logo-cell c2" />
+            <span className="logo-cell c3" />
+            <span className="logo-cell c2" />
+            <span className="logo-cell c4" />
+            <span className="logo-cell c5" />
+            <span className="logo-cell c5" />
+            <span className="logo-cell c6" />
+            <span className="logo-cell c7" />
           </div>
-          <p className="brand-subtitle">
-            Every day is a finite grid of 10-minute blocks. Spend them deliberately.
-          </p>
+          <div>
+            <div className="brand-title-row">
+              <h1 className="brand-title">BlockAir</h1>
+              <span className="brand-pill">24H · 144</span>
+            </div>
+            <p className="brand-subtitle">
+              10-minute blocks across a 24-hour clock.
+            </p>
+          </div>
+        </div>
+
+        <div className="live-clock-pill" aria-label={`Current 24-hour time ${clock24h}`}>
+          <span className="clock-dot" aria-hidden="true" />
+          <time className="clock-digits" dateTime={clock24h}>
+            {clock24h}
+          </time>
+          <span className="clock-slot-tag">
+            {activeRange.start}–{activeRange.end}
+          </span>
         </div>
       </div>
 
@@ -114,7 +131,7 @@ export const DateNavigator: React.FC<DateNavigatorProps> = ({
             onClick={() => onViewModeChange('full24')}
           >
             <span>144 Blocks</span>
-            <small>24 Hours</small>
+            <small>00:00–24:00</small>
           </button>
           <button
             type="button"
