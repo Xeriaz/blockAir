@@ -1,22 +1,26 @@
 # BlockAir
 
-**BlockAir** is an offline-first Progressive Web App (PWA) for visualizing and sculpting your day as a finite grid of 10-minute blocks—inspired by *144blocks.com* and Wait But Why’s *“100 Blocks a Day”*.
+**BlockAir** is an offline-first Progressive Web App (PWA) for visualizing and sculpting your day as a finite grid of 144 ten-minute blocks across all 24 hours (`00:00`–`24:00`).
 
 ## Features
 
-- **24-Hour Clock & Dual Time-Block Perspectives:**
-  - **Live 24-Hour Clock (`00:00` – `24:00`):** Strict 24-hour time formatting across the header clock, hourly row headers (`00:00`–`23:00`), and 10-minute block intervals.
+- **Strict 24-Hour Time & 144 Blocks:**
   - **144 Blocks (24 Hours):** Every 10-minute slice of the full 24-hour day (`00:00` – `24:00`), grouped into 24 hourly rows of 6 blocks each.
-  - **100 Blocks (Waking Day):** Focuses on the 1,000 waking minutes from `06:00` to `22:40` (100 ten-minute blocks).
-- **iPhone 16 Pro & Mobile-First PWA Layout:**
-  - Tuned for the iPhone 16 Pro viewport (`402 × 874` logical px) with `viewport-fit=cover`, Dynamic Island & Home Indicator `env(safe-area-inset-*)` padding, 6-blocks-per-hour compact grid rows, horizontal touch-scrolling category chips, and `16px` mobile inputs to prevent unwanted iOS viewport auto-zoom.
-- **Fast Activity Logging & Range Editing:**
-  - **Select & Edit Mode:** Tap a block, Shift+click a range of blocks, drag across blocks, or tap an hour label to select an entire hour, then assign a category and activity note.
-  - **Quick Paint Brush & Eraser:** Paint or clear blocks immediately with a single tap or drag.
-  - **Keyboard Shortcuts:** Use arrow keys (`↑` `↓` `←` `→`) to move across blocks, `1`–`7` to assign categories, `Delete`/`Backspace` to clear selected blocks, and `Escape` to deselect.
-- **Local Persistence & Offline PWA:**
-  - Stores data per local calendar date (`YYYY-MM-DD`) in `localStorage` with schema sanitization.
-  - Includes `public/manifest.webmanifest`, custom icons (SVG, 192×192, 512×512, maskable 512×512, and Apple touch icon), and `public/sw.js` with app-shell precaching, `./assets/*` caching, and network-first navigation.
+  - **Live 24-Hour Clock (`HH:MM`):** Continuous 24-hour clock badge and active 10-minute block interval in the header.
+  - **No 12h AM/PM:** Strict 24-hour time labels throughout all hour rows, blocks, and activity summaries.
+- **Mobile Multi-Block Selection (iPhone 16 Pro & Touchscreens):**
+  - **Range (2-Tap) Mode (Recommended for Mobile):** Tap the start block (e.g. `09:00`), then tap the end block (e.g. `11:30`)—the entire range is selected immediately with zero clumsy dragging or page-scroll conflicts.
+  - **Touch & Drag via Pointer Tracking:** In **Paint Brush** and **Eraser** modes, `touch-action: none` prevents the page from scrolling while dragging, and `document.elementFromPoint` smoothly paints or clears every block under your finger.
+  - **Select & Edit Mode:** Tap any block to view/edit it. When a single block is selected, tap the `+ Extend to next tap` shortcut to easily select a range on mobile, or use `Shift`+click on desktop.
+  - **Hour Row Selection:** Tap any hour label (e.g. `09:00`) to select or toggle all 6 blocks of that hour.
+- **Day Balance & Reflection:**
+  - Live calculation of allocated vs. unassigned hours and blocks.
+  - Proportional category distribution bar, top activities list, and a daily reflection journal.
+  - One-tap night sleep filler (`00:00`–`06:00` & `22:40`–`24:00`, 44 blocks).
+- **iPhone 16 Pro & Offline PWA:**
+  - Designed for the iPhone 16 Pro viewport (`402 × 874` logical px) with Dynamic Island and Home Indicator safe-area insets (`env(safe-area-inset-*)`).
+  - Inputs sized at `16px` to prevent unwanted iOS Safari viewport auto-zoom on focus.
+  - `public/manifest.webmanifest`, custom vector & PNG icons (including maskable), and `public/sw.js` for offline operation.
 
 ## Getting Started
 
@@ -36,34 +40,12 @@ npm run build
 
 ## Deployment
 
-### Git Worktree Deployment (`npm run deploy` -> `prod` branch)
-
-`npm run deploy` runs `npm run test:run` and `npm run build`, then executes [`scripts/deploy.sh`](./scripts/deploy.sh). The script creates a temporary detached Git worktree, copies the contents of `dist/.` (plus `.nojekyll`) into it, commits the build output, and force-pushes it to the **`prod`** branch by default while leaving your current branch and working tree untouched. An `EXIT` trap guarantees the temporary worktree is cleaned up on both success and failure.
+`npm run deploy` runs tests and production build, then executes [`scripts/deploy.sh`](./scripts/deploy.sh), which creates a temporary detached Git worktree, copies `dist/.`, commits the build output, and force-pushes it to the **`prod`** branch on `origin`:
 
 ```bash
-# Deploys to origin/prod by default
+# Deploy to origin/prod
 npm run deploy
-```
 
-#### Changing the Target Deployment Branch or Remote
-
-You can override the target branch via the `DEPLOY_BRANCH` environment variable or by passing the branch name as an argument:
-
-```bash
-# Deploy to 'gh-pages' instead of 'prod'
-DEPLOY_BRANCH=gh-pages npm run deploy
-
-# Or pass the branch name directly to the script
-npm run deploy -- gh-pages
-
-# Override both remote and branch
-DEPLOY_REMOTE=upstream DEPLOY_BRANCH=prod npm run deploy
-```
-
-### Cross-Platform Node Alternative (`gh-pages`)
-
-If you are on an environment without `bash` (such as Windows Command Prompt without Git Bash/WSL), you can deploy `dist/` to the `prod` branch using the `gh-pages` package via `npx` after building:
-
-```bash
-npm run test:run && npm run build && npx gh-pages -d dist -b prod
+# Or deploy to an alternative branch
+DEPLOY_BRANCH=my-branch npm run deploy
 ```

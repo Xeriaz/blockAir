@@ -1,10 +1,10 @@
-import React, { useRef, useState } from 'react';
-import type { BlockEntry, Category, GridViewMode } from '../types/blockair';
+import React, { useEffect, useRef } from 'react';
+import type { BlockEntry, Category } from '../types/blockair';
 import {
+  BLOCKS_PER_DAY,
   BLOCKS_PER_HOUR,
   getBlockTimeRange,
   getCategoryMap,
-  getVisibleBlockIndices,
   groupBlocksByHour,
 } from '../utils/timeBlocks';
 import type { InteractionTool } from './BlockComposer';
@@ -12,35 +12,73 @@ import type { InteractionTool } from './BlockComposer';
 interface BlockGridProps {
   blocks: Record<number, BlockEntry>;
   categories: Category[];
-  viewMode: GridViewMode;
   selectedBlocks: number[];
+  rangeAnchor: number | null;
   currentBlockIndex: number | null;
   interactionTool: InteractionTool;
   highlightedCategoryId: string | null;
   onBlockInteract: (blockIndex: number, isShiftKey: boolean) => void;
-  onBlockDragEnter: (blockIndex: number) => void;
+  onBlockDragOver: (blockIndex: number) => void;
   onSelectHourRow: (blockIndices: number[]) => void;
 }
 
 export const BlockGrid: React.FC<BlockGridProps> = ({
   blocks,
   categories,
-  viewMode,
   selectedBlocks,
+  rangeAnchor,
   currentBlockIndex,
   interactionTool,
   highlightedCategoryId,
   onBlockInteract,
-  onBlockDragEnter,
+  onBlockDragOver,
   onSelectHourRow,
 }) => {
-  const [isPointerDragging, setIsPointerDragging] = useState(false);
   const gridRef = useRef<HTMLDivElement | null>(null);
+  const isDraggingRef = useRef(false);
+  const lastHoveredBlockRef = useRef<number | null>(null);
 
   const categoryMap = getCategoryMap(categories);
-  const visibleIndices = getVisibleBlockIndices(viewMode);
-  const hourGroups = groupBlocksByHour(visibleIndices);
+  const hourGroups = groupBlocksByHour();
   const selectedSet = new Set(selectedBlocks);
+
+  useEffect(() => {
+    const handleGlobalPointerMove = (e: PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      // Use document.elementFromPoint so touch drag works across elements on mobile
+      const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-block-index]');
+      if (el) {
+        const rawIdx = el.getAttribute('data-block-index');
+        if (rawIdx !== null) {
+          const idx = Number(rawIdx);
+          if (
+            !Number.isNaN(idx) &&
+            idx >= 0 &&
+            idx < BLOCKS_PER_DAY &&
+            idx !== lastHoveredBlockRef.current
+          ) {
+            lastHoveredBlockRef.current = idx;
+            onBlockDragOver(idx);
+          }
+        }
+      }
+    };
+
+    const handleGlobalPointerUp = () => {
+      isDraggingRef.current = false;
+      lastHoveredBlockRef.current = null;
+    };
+
+    window.addEventListener('pointermove', handleGlobalPointerMove, { passive: true });
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    window.addEventListener('pointercancel', handleGlobalPointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handleGlobalPointerMove);
+      window.removeEventListener('pointerup', handleGlobalPointerUp);
+      window.removeEventListener('pointercancel', handleGlobalPointerUp);
+    };
+  }, [onBlockDragOver]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, blockIndex: number) => {
     let targetIndex: number | null = null;
@@ -59,20 +97,12 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
   };
 
   return (
-    <section
-      className="grid-panel"
-      aria-label="Daily time block grid"
-      onPointerUp={() => setIsPointerDragging(false)}
-      onPointerCancel={() => setIsPointerDragging(false)}
-      onMouseLeave={() => setIsPointerDragging(false)}
-    >
+    <section className="grid-panel" aria-label="Daily time block grid">
       <div className="grid-panel-header">
         <div className="grid-title-group">
-          <h2 className="panel-title">
-            {viewMode === 'full24' ? '24-Hour Grid · 144 Blocks' : 'Waking Grid · 100 Blocks'}
-          </h2>
+          <h2 className="panel-title">24-Hour Grid · 144 Blocks</h2>
           <span className="grid-subtitle">
-            Each block = 10 minutes · 6 blocks per row = 1 hour
+            10 min / block · 6 blocks / row · 24 hours (00:00–24:00)
           </span>
         </div>
         <div className="minute-markers" aria-hidden="true">
@@ -85,7 +115,7 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
         </div>
       </div>
 
-      <div className="hour-rows" ref={gridRef}>
+      <div className={`hour-rows mode-${interactionTool}`} ref={gridRef}>
         {hourGroups.map((group) => {
           const isHourSelected = group.blockIndices.every((idx) => selectedSet.has(idx));
           return (
@@ -101,12 +131,13 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
                 <span className="hour-period">{group.periodLabel}</span>
               </button>
 
-              <div className="hour-blocks-track">
+              <div className={`hour-blocks-track track-${interactionTool}`}>
                 {group.blockIndices.map((blockIndex) => {
                   const range = getBlockTimeRange(blockIndex);
                   const entry = blocks[blockIndex];
                   const category = entry ? categoryMap[entry.categoryId] : undefined;
                   const isSelected = selectedSet.has(blockIndex);
+                  const isRangeAnchor = rangeAnchor === blockIndex;
                   const isCurrentNow = currentBlockIndex === blockIndex;
                   const isDimmed =
                     highlightedCategoryId !== null &&
@@ -132,6 +163,9 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
                   if (isCurrentNow) {
                     ariaParts.push('Current time block');
                   }
+                  if (isRangeAnchor) {
+                    ariaParts.push('Range start');
+                  }
 
                   return (
                     <button
@@ -144,6 +178,7 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
                         'time-block',
                         category ? 'is-assigned' : 'is-empty',
                         isSelected ? 'is-selected' : '',
+                        isRangeAnchor ? 'is-range-anchor' : '',
                         isCurrentNow ? 'is-now' : '',
                         isDimmed ? 'is-dimmed' : '',
                         `tool-cursor-${interactionTool}`,
@@ -164,19 +199,24 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
                       }}
                       onPointerDown={(e) => {
                         if (e.button === 0) {
-                          setIsPointerDragging(true);
-                        }
-                      }}
-                      onPointerEnter={() => {
-                        if (isPointerDragging) {
-                          onBlockDragEnter(blockIndex);
+                          isDraggingRef.current = true;
+                          lastHoveredBlockRef.current = blockIndex;
                         }
                       }}
                       onKeyDown={(e) => handleKeyDown(e, blockIndex)}
                     >
                       <span className="block-top-meta">
                         <span className="block-time-tiny">{range.start}</span>
-                        {isCurrentNow && <span className="now-dot" title="Current 10m block">NOW</span>}
+                        {isCurrentNow && (
+                          <span className="now-dot" title="Current 10m block">
+                            NOW
+                          </span>
+                        )}
+                        {isRangeAnchor && (
+                          <span className="anchor-dot" title="Range start">
+                            START
+                          </span>
+                        )}
                       </span>
 
                       {category ? (

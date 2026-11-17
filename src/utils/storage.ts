@@ -1,4 +1,4 @@
-import type { AppDataStore, BlockEntry, DayRecord, GridViewMode } from '../types/blockair';
+import type { AppDataStore, BlockEntry, DayRecord } from '../types/blockair';
 import { BLOCKS_PER_DAY } from './timeBlocks';
 
 export const STORAGE_KEY = 'blockair:v1:store';
@@ -8,7 +8,6 @@ export function createEmptyStore(): AppDataStore {
   return {
     version: STORE_VERSION,
     days: {},
-    preferredViewMode: 'full24',
   };
 }
 
@@ -70,9 +69,6 @@ export function loadStore(storage: Storage | undefined = globalThis.localStorage
     if (!parsed || typeof parsed !== 'object') return createEmptyStore();
 
     const record = parsed as Record<string, unknown>;
-    const preferredViewMode: GridViewMode =
-      record.preferredViewMode === 'waking100' ? 'waking100' : 'full24';
-
     const days: Record<string, DayRecord> = {};
     if (record.days && typeof record.days === 'object') {
       for (const [dateKey, dayVal] of Object.entries(record.days as Record<string, unknown>)) {
@@ -87,7 +83,6 @@ export function loadStore(storage: Storage | undefined = globalThis.localStorage
     return {
       version: STORE_VERSION,
       days,
-      preferredViewMode,
     };
   } catch {
     return createEmptyStore();
@@ -242,17 +237,7 @@ export function setDayReflection(
 }
 
 /**
- * Sets the preferred grid view mode ('full24' vs 'waking100').
- */
-export function setPreferredViewMode(store: AppDataStore, mode: GridViewMode): AppDataStore {
-  return {
-    ...store,
-    preferredViewMode: mode,
-  };
-}
-
-/**
- * Fills common sleep blocks (00:00–06:00 and 22:40–24:00 = 44 blocks) without overwriting already logged waking blocks.
+ * Fills common sleep blocks (00:00–06:00 and 22:40–24:00 = 44 blocks) without overwriting already logged blocks.
  */
 export function fillNightSleepBlocks(
   store: AppDataStore,
@@ -263,7 +248,7 @@ export function fillNightSleepBlocks(
   const nextBlocks: Record<number, BlockEntry> = { ...existingDay.blocks };
   const now = Date.now();
 
-  // 00:00-06:00 (0..35) and 22:40-24:00 (136..143) => 44 sleep blocks, leaving 100 waking blocks
+  // 00:00-06:00 (0..35) and 22:40-24:00 (136..143) => 44 sleep blocks
   const sleepIndices = [
     ...Array.from({ length: 36 }, (_, i) => i),
     ...Array.from({ length: 8 }, (_, i) => 136 + i),

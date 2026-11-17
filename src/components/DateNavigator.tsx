@@ -1,5 +1,4 @@
 import React from 'react';
-import type { GridViewMode } from '../types/blockair';
 import { formatHumanDate, getBlockTimeRange } from '../utils/timeBlocks';
 
 interface DateNavigatorProps {
@@ -7,10 +6,8 @@ interface DateNavigatorProps {
   todayDateKey: string;
   clock24h: string;
   currentBlockIndex: number;
-  viewMode: GridViewMode;
   onSelectDate: (dateKey: string) => void;
   onShiftDate: (deltaDays: number) => void;
-  onViewModeChange: (mode: GridViewMode) => void;
 }
 
 export const DateNavigator: React.FC<DateNavigatorProps> = ({
@@ -18,10 +15,8 @@ export const DateNavigator: React.FC<DateNavigatorProps> = ({
   todayDateKey,
   clock24h,
   currentBlockIndex,
-  viewMode,
   onSelectDate,
   onShiftDate,
-  onViewModeChange,
 }) => {
   const { primary, secondary, relativeBadge, isToday } = formatHumanDate(
     selectedDateKey,
@@ -50,7 +45,7 @@ export const DateNavigator: React.FC<DateNavigatorProps> = ({
               <span className="brand-pill">24H · 144</span>
             </div>
             <p className="brand-subtitle">
-              10-minute blocks across a 24-hour clock.
+              Every day is 144 ten-minute blocks.
             </p>
           </div>
         </div>
@@ -121,27 +116,6 @@ export const DateNavigator: React.FC<DateNavigatorProps> = ({
               Today
             </button>
           )}
-        </div>
-
-        <div className="view-mode-toggle" role="group" aria-label="Grid view mode">
-          <button
-            type="button"
-            className={`mode-btn ${viewMode === 'full24' ? 'active' : ''}`}
-            aria-pressed={viewMode === 'full24'}
-            onClick={() => onViewModeChange('full24')}
-          >
-            <span>144 Blocks</span>
-            <small>00:00–24:00</small>
-          </button>
-          <button
-            type="button"
-            className={`mode-btn ${viewMode === 'waking100' ? 'active' : ''}`}
-            aria-pressed={viewMode === 'waking100'}
-            onClick={() => onViewModeChange('waking100')}
-          >
-            <span>100 Blocks</span>
-            <small>06:00–22:40</small>
-          </button>
         </div>
       </div>
     </header>

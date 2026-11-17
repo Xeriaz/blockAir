@@ -3,7 +3,7 @@ import { BlockComposer, type InteractionTool } from './components/BlockComposer'
 import { BlockGrid } from './components/BlockGrid';
 import { DateNavigator } from './components/DateNavigator';
 import { DayOverview } from './components/DayOverview';
-import type { AppDataStore, GridViewMode } from './types/blockair';
+import type { AppDataStore } from './types/blockair';
 import {
   assignBlocksInDay,
   clearBlocksInDay,
@@ -11,7 +11,6 @@ import {
   loadStore,
   saveStore,
   setDayReflection,
-  setPreferredViewMode,
 } from './utils/storage';
 import {
   BLOCKS_PER_DAY,
@@ -20,6 +19,7 @@ import {
   formatClock24h,
   formatDateKey,
   formatDurationMinutes,
+  getBlockTimeRange,
   getCategoryMap,
   getCurrentBlockIndex,
   MINUTES_PER_BLOCK,
@@ -46,6 +46,7 @@ export const App: React.FC = () => {
   const [interactionTool, setInteractionTool] = useState<InteractionTool>('select');
   const [selectedBlocks, setSelectedBlocks] = useState<number[]>([]);
   const [selectionAnchor, setSelectionAnchor] = useState<number | null>(null);
+  const [rangeAnchor, setRangeAnchor] = useState<number | null>(null);
   const [highlightedCategoryId, setHighlightedCategoryId] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
@@ -78,18 +79,18 @@ export const App: React.FC = () => {
   const currentDayRecord = store.days[selectedDateKey];
   const dayBlocks = currentDayRecord?.blocks ?? {};
   const dayReflection = currentDayRecord?.reflection ?? '';
-  const viewMode = store.preferredViewMode;
   const categoryMap = useMemo(() => getCategoryMap(DEFAULT_CATEGORIES), []);
 
   const overviewStats = useMemo(
-    () => computeDayOverview(currentDayRecord, DEFAULT_CATEGORIES, viewMode),
-    [currentDayRecord, viewMode]
+    () => computeDayOverview(currentDayRecord, DEFAULT_CATEGORIES),
+    [currentDayRecord]
   );
 
   const handleSelectDate = (nextDateKey: string) => {
     setSelectedDateKey(nextDateKey);
     setSelectedBlocks([]);
     setSelectionAnchor(null);
+    setRangeAnchor(null);
   };
 
   const handleShiftDate = (deltaDays: number) => {
@@ -97,8 +98,20 @@ export const App: React.FC = () => {
     handleSelectDate(nextDateKey);
   };
 
-  const handleViewModeChange = (mode: GridViewMode) => {
-    setStore((prev) => setPreferredViewMode(prev, mode));
+  const handleChangeTool = (tool: InteractionTool) => {
+    setInteractionTool(tool);
+    if (tool === 'range') {
+      if (selectedBlocks.length === 1) {
+        setRangeAnchor(selectedBlocks[0]);
+        announceFeedback(
+          `Start set to ${getBlockTimeRange(selectedBlocks[0]).start}. Tap any block to complete range.`
+        );
+      } else {
+        setRangeAnchor(null);
+      }
+    } else {
+      setRangeAnchor(null);
+    }
   };
 
   const applyCategoryAndNoteToBlocks = (targetBlocks: number[], overrideCategoryId?: string) => {
@@ -139,7 +152,27 @@ export const App: React.FC = () => {
       return;
     }
 
-    // 'select' tool mode: support single click and Shift+click range selection
+    // Two-Tap Range mode (specifically optimized for mobile touch)
+    if (interactionTool === 'range') {
+      if (rangeAnchor === null) {
+        setRangeAnchor(blockIndex);
+        setSelectedBlocks([blockIndex]);
+        setSelectionAnchor(blockIndex);
+        announceFeedback(
+          `Start set to ${getBlockTimeRange(blockIndex).start}. Now tap end block.`
+        );
+      } else {
+        const range = buildInclusiveRange(rangeAnchor, blockIndex);
+        setSelectedBlocks(range);
+        setSelectionAnchor(blockIndex);
+        setRangeAnchor(null);
+        const durationStr = formatDurationMinutes(range.length * MINUTES_PER_BLOCK);
+        announceFeedback(`Selected ${range.length} blocks (${durationStr})`);
+      }
+      return;
+    }
+
+    // 'select' tool mode: support single tap, Shift+click, and tap-toggle
     if (isShiftKey && selectionAnchor !== null) {
       const range = buildInclusiveRange(selectionAnchor, blockIndex);
       setSelectedBlocks(range);
@@ -150,11 +183,13 @@ export const App: React.FC = () => {
     if (selectedBlocks.length === 1 && selectedBlocks[0] === blockIndex) {
       setSelectedBlocks([]);
       setSelectionAnchor(null);
+      setRangeAnchor(null);
       return;
     }
 
     setSelectedBlocks([blockIndex]);
     setSelectionAnchor(blockIndex);
+    setRangeAnchor(null);
 
     // Sync composer fields with the clicked block if it already has an entry
     const existing = dayBlocks[blockIndex];
@@ -164,7 +199,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleBlockDragEnter = (blockIndex: number) => {
+  const handleBlockDragOver = (blockIndex: number) => {
     if (interactionTool === 'paint') {
       applyCategoryAndNoteToBlocks([blockIndex]);
       return;
@@ -173,11 +208,25 @@ export const App: React.FC = () => {
       deleteBlocks([blockIndex]);
       return;
     }
-    if (selectionAnchor !== null) {
-      setSelectedBlocks(buildInclusiveRange(selectionAnchor, blockIndex));
+
+    // In select or range mode: dragging expands the selection range
+    const anchor = rangeAnchor !== null ? rangeAnchor : selectionAnchor;
+    if (anchor !== null) {
+      setSelectedBlocks(buildInclusiveRange(anchor, blockIndex));
     } else {
       setSelectionAnchor(blockIndex);
       setSelectedBlocks([blockIndex]);
+    }
+  };
+
+  const handleStartRangeFromSelection = () => {
+    if (selectedBlocks.length === 1) {
+      const block = selectedBlocks[0];
+      setInteractionTool('range');
+      setRangeAnchor(block);
+      announceFeedback(
+        `Start set to ${getBlockTimeRange(block).start}. Tap any block to complete the range.`
+      );
     }
   };
 
@@ -186,9 +235,11 @@ export const App: React.FC = () => {
     if (allSelected) {
       setSelectedBlocks((prev) => prev.filter((idx) => !hourBlockIndices.includes(idx)));
       setSelectionAnchor(null);
+      setRangeAnchor(null);
     } else {
       setSelectedBlocks(hourBlockIndices);
       setSelectionAnchor(hourBlockIndices[0] ?? null);
+      setRangeAnchor(null);
     }
   };
 
@@ -202,6 +253,7 @@ export const App: React.FC = () => {
     setStore((prev) => clearBlocksInDay(prev, selectedDateKey, allIndices));
     setSelectedBlocks([]);
     setSelectionAnchor(null);
+    setRangeAnchor(null);
     announceFeedback('Reset all blocks for this day');
   };
 
@@ -225,6 +277,7 @@ export const App: React.FC = () => {
       if (e.key === 'Escape') {
         setSelectedBlocks([]);
         setSelectionAnchor(null);
+        setRangeAnchor(null);
         setHighlightedCategoryId(null);
         return;
       }
@@ -234,6 +287,7 @@ export const App: React.FC = () => {
         deleteBlocks(selectedBlocks);
         setSelectedBlocks([]);
         setSelectionAnchor(null);
+        setRangeAnchor(null);
         return;
       }
 
@@ -241,7 +295,7 @@ export const App: React.FC = () => {
       if (matchedCat && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         setActiveCategoryId(matchedCat.id);
-        if (selectedBlocks.length > 0 && interactionTool === 'select') {
+        if (selectedBlocks.length > 0 && (interactionTool === 'select' || interactionTool === 'range')) {
           applyCategoryAndNoteToBlocks(selectedBlocks, matchedCat.id);
         }
       }
@@ -260,10 +314,8 @@ export const App: React.FC = () => {
         todayDateKey={todayDateKey}
         clock24h={clock24h}
         currentBlockIndex={currentBlockIndex}
-        viewMode={viewMode}
         onSelectDate={handleSelectDate}
         onShiftDate={handleShiftDate}
-        onViewModeChange={handleViewModeChange}
       />
 
       <main className="main-workspace">
@@ -274,31 +326,37 @@ export const App: React.FC = () => {
             activityDraft={activityDraft}
             interactionTool={interactionTool}
             selectedBlocks={selectedBlocks}
+            rangeAnchor={rangeAnchor}
             onSelectCategory={setActiveCategoryId}
             onChangeActivityDraft={setActivityDraft}
-            onChangeTool={setInteractionTool}
-            onApplyToSelection={(overrideCatId) => applyCategoryAndNoteToBlocks(selectedBlocks, overrideCatId)}
+            onChangeTool={handleChangeTool}
+            onApplyToSelection={(overrideCatId) =>
+              applyCategoryAndNoteToBlocks(selectedBlocks, overrideCatId)
+            }
             onDeleteSelection={() => {
               deleteBlocks(selectedBlocks);
               setSelectedBlocks([]);
               setSelectionAnchor(null);
+              setRangeAnchor(null);
             }}
             onClearSelection={() => {
               setSelectedBlocks([]);
               setSelectionAnchor(null);
+              setRangeAnchor(null);
             }}
+            onStartRangeFromSelection={handleStartRangeFromSelection}
           />
 
           <BlockGrid
             blocks={dayBlocks}
             categories={DEFAULT_CATEGORIES}
-            viewMode={viewMode}
             selectedBlocks={selectedBlocks}
+            rangeAnchor={rangeAnchor}
             currentBlockIndex={isViewingToday ? currentBlockIndex : null}
             interactionTool={interactionTool}
             highlightedCategoryId={highlightedCategoryId}
             onBlockInteract={handleBlockInteract}
-            onBlockDragEnter={handleBlockDragEnter}
+            onBlockDragOver={handleBlockDragOver}
             onSelectHourRow={handleSelectHourRow}
           />
         </div>

@@ -101,7 +101,7 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
             <p className="empty-title">No blocks logged for this day yet.</p>
             <p className="empty-copy">
               Select blocks in the grid to record how your time was spent, or pre-fill night sleep
-              to focus on your 100 waking blocks.
+              (00:00–06:00 &amp; 22:40–24:00).
             </p>
             <button type="button" className="secondary-btn" onClick={onFillNightSleep}>
               Pre-fill Night Sleep (44 blocks)

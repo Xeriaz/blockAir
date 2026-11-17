@@ -4,18 +4,13 @@ import type {
   CategorySummary,
   DayOverviewStats,
   DayRecord,
-  GridViewMode,
   HourRowGroup,
 } from '../types/blockair';
 
 export const BLOCKS_PER_DAY = 144;
 export const MINUTES_PER_BLOCK = 10;
 export const BLOCKS_PER_HOUR = 6;
-
-// Wait But Why's "100 Blocks a Day": 1,000 waking minutes (16h 40m) from 06:00 to 22:40
-export const WAKING_START_BLOCK = 36; // 06:00
-export const WAKING_BLOCK_COUNT = 100; // 100 blocks * 10m = 1000m
-export const WAKING_END_BLOCK = WAKING_START_BLOCK + WAKING_BLOCK_COUNT - 1; // 135 (22:30-22:40)
+export const HOURS_PER_DAY = 24;
 
 export const DEFAULT_CATEGORIES: Category[] = [
   {
@@ -260,14 +255,9 @@ export function getCurrentBlockIndex(now: Date = new Date()): number {
 }
 
 /**
- * Returns the ordered array of block indices visible in the current GridViewMode.
- * - 'full24': 0..143 (144 blocks = 24 hours)
- * - 'waking100': 36..135 (100 blocks = 06:00 to 22:40)
+ * Returns the ordered array of 144 block indices across the full 24-hour day (0..143).
  */
-export function getVisibleBlockIndices(mode: GridViewMode): number[] {
-  if (mode === 'waking100') {
-    return Array.from({ length: WAKING_BLOCK_COUNT }, (_, i) => WAKING_START_BLOCK + i);
-  }
+export function getVisibleBlockIndices(): number[] {
   return Array.from({ length: BLOCKS_PER_DAY }, (_, i) => i);
 }
 
@@ -280,9 +270,9 @@ export function getPeriodLabelForHour(hour: number): string {
 }
 
 /**
- * Groups visible block indices into hourly rows (6 blocks per full hour, 4 blocks in the final hour of waking100).
+ * Groups all 144 block indices into 24 hourly rows (6 blocks per hour).
  */
-export function groupBlocksByHour(indices: number[]): HourRowGroup[] {
+export function groupBlocksByHour(indices: number[] = getVisibleBlockIndices()): HourRowGroup[] {
   const map = new Map<number, number[]>();
   for (const idx of indices) {
     const hour = Math.floor(idx / BLOCKS_PER_HOUR);
@@ -305,22 +295,20 @@ export function groupBlocksByHour(indices: number[]): HourRowGroup[] {
 }
 
 /**
- * Computes comprehensive overview statistics for the day in the active view mode.
+ * Computes comprehensive overview statistics for the day across all 144 blocks (24 hours).
  */
 export function computeDayOverview(
   dayRecord: DayRecord | undefined,
-  categories: Category[] = DEFAULT_CATEGORIES,
-  mode: GridViewMode = 'full24'
+  categories: Category[] = DEFAULT_CATEGORIES
 ): DayOverviewStats {
-  const visibleIndices = getVisibleBlockIndices(mode);
-  const totalVisibleBlocks = visibleIndices.length;
+  const totalVisibleBlocks = BLOCKS_PER_DAY;
   const blocks = dayRecord?.blocks ?? {};
   const categoryCounts = new Map<string, number>();
   const activityMap = new Map<string, { label: string; categoryId: string; count: number }>();
 
   let allocatedBlocks = 0;
 
-  for (const idx of visibleIndices) {
+  for (let idx = 0; idx < BLOCKS_PER_DAY; idx++) {
     const entry = blocks[idx];
     if (!entry || !entry.categoryId) continue;
     allocatedBlocks += 1;

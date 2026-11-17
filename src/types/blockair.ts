@@ -1,5 +1,3 @@
-export type GridViewMode = 'full24' | 'waking100';
-
 export interface Category {
   id: string;
   name: string;
@@ -58,5 +56,4 @@ export interface HourRowGroup {
 export interface AppDataStore {
   version: number;
   days: Record<string, DayRecord>;
-  preferredViewMode: GridViewMode;
 }

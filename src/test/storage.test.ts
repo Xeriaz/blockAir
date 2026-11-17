@@ -11,7 +11,7 @@ import {
 } from '../utils/storage';
 
 describe('storage persistence utilities', () => {
-  it('saves and reloads day records and view preferences from localStorage', () => {
+  it('saves and reloads day records from localStorage', () => {
     let store = createEmptyStore();
     store = assignBlocksInDay(store, '2026-11-17', [48, 49, 50], {
       categoryId: 'deep-work',
@@ -63,13 +63,11 @@ describe('storage persistence utilities', () => {
     localStorage.setItem(STORAGE_KEY, '{not-valid-json');
     const fallback = loadStore();
     expect(fallback.days).toEqual({});
-    expect(fallback.preferredViewMode).toBe('full24');
 
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
         version: 1,
-        preferredViewMode: 'waking100',
         days: {
           '2026-11-17': {
             blocks: {
@@ -86,7 +84,6 @@ describe('storage persistence utilities', () => {
     );
 
     const sanitized = loadStore();
-    expect(sanitized.preferredViewMode).toBe('waking100');
     expect(sanitized.days['bad-date-key']).toBeUndefined();
     expect(Object.keys(sanitized.days['2026-11-17'].blocks)).toEqual(['42']);
   });

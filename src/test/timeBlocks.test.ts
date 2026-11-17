@@ -12,11 +12,9 @@ import {
   getCurrentBlockIndex,
   getVisibleBlockIndices,
   groupBlocksByHour,
+  HOURS_PER_DAY,
   parseDateKey,
   shiftDateKey,
-  WAKING_BLOCK_COUNT,
-  WAKING_END_BLOCK,
-  WAKING_START_BLOCK,
 } from '../utils/timeBlocks';
 
 describe('timeBlocks utilities', () => {
@@ -56,21 +54,18 @@ describe('timeBlocks utilities', () => {
     expect(formatBlockRange(54, 54)).toBe('09:00 – 09:10 (10m · 1 block)');
   });
 
-  it('returns 144 indices for full24 mode and 100 indices for waking100 mode', () => {
-    const full = getVisibleBlockIndices('full24');
+  it('returns all 144 indices grouped into 24 hourly rows', () => {
+    const full = getVisibleBlockIndices();
     expect(full).toHaveLength(BLOCKS_PER_DAY);
     expect(full[0]).toBe(0);
     expect(full[full.length - 1]).toBe(143);
 
-    const waking = getVisibleBlockIndices('waking100');
-    expect(waking).toHaveLength(WAKING_BLOCK_COUNT);
-    expect(waking[0]).toBe(WAKING_START_BLOCK); // 06:00
-    expect(waking[waking.length - 1]).toBe(WAKING_END_BLOCK); // 22:30-22:40
-
-    const wakingGroups = groupBlocksByHour(waking);
-    expect(wakingGroups[0].hourLabel).toBe('06:00');
-    expect(wakingGroups[wakingGroups.length - 1].hourLabel).toBe('22:00');
-    expect(wakingGroups[wakingGroups.length - 1].blockIndices).toHaveLength(4);
+    const groups = groupBlocksByHour();
+    expect(groups).toHaveLength(HOURS_PER_DAY);
+    expect(groups[0].hourLabel).toBe('00:00');
+    expect(groups[23].hourLabel).toBe('23:00');
+    expect(groups[0].blockIndices).toHaveLength(6);
+    expect(groups[23].blockIndices).toHaveLength(6);
   });
 
   it('handles local calendar dates without UTC drift', () => {
@@ -102,7 +97,7 @@ describe('timeBlocks utilities', () => {
     expect(getCurrentBlockIndex(new Date(2026, 10, 17, 23, 59))).toBe(143);
   });
 
-  it('computes day overview statistics per category and unassigned time', () => {
+  it('computes day overview statistics across all 144 blocks', () => {
     const dayRecord = {
       dateKey: '2026-11-17',
       blocks: {
@@ -113,13 +108,13 @@ describe('timeBlocks utilities', () => {
       },
     };
 
-    const stats = computeDayOverview(dayRecord, DEFAULT_CATEGORIES, 'waking100');
-    expect(stats.totalVisibleBlocks).toBe(100);
+    const stats = computeDayOverview(dayRecord, DEFAULT_CATEGORIES);
+    expect(stats.totalVisibleBlocks).toBe(144);
     expect(stats.allocatedBlocks).toBe(4);
-    expect(stats.unassignedBlocks).toBe(96);
+    expect(stats.unassignedBlocks).toBe(140);
     expect(stats.allocatedMinutes).toBe(40);
-    expect(stats.unassignedMinutes).toBe(960);
-    expect(stats.completionPercent).toBe(4);
+    expect(stats.unassignedMinutes).toBe(1400);
+    expect(stats.completionPercent).toBe(3);
 
     expect(stats.categorySummaries).toHaveLength(2);
     expect(stats.categorySummaries[0].category.id).toBe('deep-work');

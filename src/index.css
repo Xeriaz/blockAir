@@ -238,7 +238,7 @@ textarea:focus-visible {
   padding: 0.3rem 0.45rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
-  flex: 1 1 auto;
+  width: 100%;
   justify-content: space-between;
 }
 
@@ -328,45 +328,6 @@ textarea:focus-visible {
   background: rgba(56, 189, 248, 0.25);
 }
 
-.view-mode-toggle {
-  display: inline-flex;
-  background: var(--bg-surface-elevated);
-  padding: 0.22rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  gap: 0.22rem;
-}
-
-.mode-btn {
-  border: none;
-  background: transparent;
-  padding: 0.32rem 0.65rem;
-  border-radius: var(--radius-sm);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.15;
-  color: var(--text-secondary);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.mode-btn span {
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.mode-btn small {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: var(--text-muted);
-}
-
-.mode-btn.active {
-  background: rgba(56, 189, 248, 0.18);
-  color: var(--text-primary);
-  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.45);
-}
-
 /* Main two-column workspace */
 .main-workspace {
   display: grid;
@@ -441,7 +402,7 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .selection-badge {
@@ -452,6 +413,21 @@ textarea:focus-visible {
   border: 1px solid rgba(56, 189, 248, 0.35);
   padding: 0.2rem 0.55rem;
   border-radius: var(--radius-pill);
+}
+
+.extend-range-btn {
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px dashed rgba(56, 189, 248, 0.65);
+  color: var(--accent-primary);
+  padding: 0.18rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+.extend-range-btn:hover {
+  background: rgba(56, 189, 248, 0.28);
 }
 
 .text-link-btn {
@@ -615,6 +591,7 @@ textarea:focus-visible {
   padding: 1rem 1.1rem;
   box-shadow: var(--shadow-card);
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .grid-panel-header {
@@ -705,6 +682,12 @@ textarea:focus-visible {
   gap: 0.32rem;
 }
 
+/* In paint and erase modes, avoid page scroll gestures during drag */
+.hour-blocks-track.track-paint .time-block,
+.hour-blocks-track.track-erase .time-block {
+  touch-action: none;
+}
+
 .time-block {
   min-height: 44px;
   border-radius: var(--radius-sm);
@@ -718,6 +701,9 @@ textarea:focus-visible {
   text-align: left;
   position: relative;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   transition: transform 0.08s ease, border-color 0.12s ease, background 0.12s ease, opacity 0.15s ease;
 }
 
@@ -735,6 +721,22 @@ textarea:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-primary);
   border-color: var(--accent-primary);
   z-index: 1;
+}
+
+.time-block.is-range-anchor {
+  box-shadow: 0 0 0 2px #38bdf8, 0 0 10px rgba(56, 189, 248, 0.6);
+  border-color: #38bdf8;
+  animation: pulse-anchor 1.4s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes pulse-anchor {
+  0%, 100% {
+    box-shadow: 0 0 0 2px #38bdf8, 0 0 6px rgba(56, 189, 248, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 2px #38bdf8, 0 0 14px rgba(56, 189, 248, 0.85);
+  }
 }
 
 .time-block.is-now {
@@ -766,6 +768,16 @@ textarea:focus-visible {
   padding: 0.03rem 0.22rem;
   border-radius: 3px;
   background: var(--accent-now);
+  color: #fff;
+}
+
+.anchor-dot {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 700;
+  padding: 0.03rem 0.22rem;
+  border-radius: 3px;
+  background: #0284c7;
   color: #fff;
 }
 
@@ -1152,34 +1164,24 @@ textarea:focus-visible {
     display: none;
   }
 
-  .view-mode-toggle {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .mode-btn {
-    align-items: center;
-    text-align: center;
-    padding: 0.32rem 0.4rem;
-  }
-
   .composer-card {
     padding: 0.75rem 0.8rem;
     gap: 0.65rem;
     border-radius: var(--radius-md);
   }
 
+  /* 2x2 grid on phone so all 4 tool buttons are large and easy to tap */
   .tool-switcher {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.22rem;
   }
 
   .tool-btn {
     text-align: center;
-    padding: 0.36rem 0.3rem;
-    font-size: 0.74rem;
+    padding: 0.42rem 0.35rem;
+    font-size: 0.76rem;
   }
 
   /* Horizontal touch-scroll strip for categories on iPhone 16 Pro */

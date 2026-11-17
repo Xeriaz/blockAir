@@ -2,7 +2,7 @@ import React from 'react';
 import type { Category } from '../types/blockair';
 import { formatBlockRange } from '../utils/timeBlocks';
 
-export type InteractionTool = 'select' | 'paint' | 'erase';
+export type InteractionTool = 'select' | 'range' | 'paint' | 'erase';
 
 interface BlockComposerProps {
   categories: Category[];
@@ -10,12 +10,14 @@ interface BlockComposerProps {
   activityDraft: string;
   interactionTool: InteractionTool;
   selectedBlocks: number[];
+  rangeAnchor: number | null;
   onSelectCategory: (categoryId: string) => void;
   onChangeActivityDraft: (value: string) => void;
   onChangeTool: (tool: InteractionTool) => void;
   onApplyToSelection: (categoryId?: string) => void;
   onDeleteSelection: () => void;
   onClearSelection: () => void;
+  onStartRangeFromSelection?: () => void;
 }
 
 export const BlockComposer: React.FC<BlockComposerProps> = ({
@@ -24,12 +26,14 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
   activityDraft,
   interactionTool,
   selectedBlocks,
+  rangeAnchor,
   onSelectCategory,
   onChangeActivityDraft,
   onChangeTool,
   onApplyToSelection,
   onDeleteSelection,
   onClearSelection,
+  onStartRangeFromSelection,
 }) => {
   const sortedSelection = [...selectedBlocks].sort((a, b) => a - b);
   const hasSelection = sortedSelection.length > 0;
@@ -44,6 +48,18 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
     }
   };
 
+  let toolHint = 'Tap a block to edit. Tap "Range" or drag across blocks to select multiple.';
+  if (interactionTool === 'range') {
+    toolHint =
+      rangeAnchor !== null
+        ? 'Start block chosen. Now tap any block to complete the range.'
+        : 'Tap the start block, then tap the end block to select a time span.';
+  } else if (interactionTool === 'paint') {
+    toolHint = 'Tap or drag across blocks to paint immediately with selected category.';
+  } else if (interactionTool === 'erase') {
+    toolHint = 'Tap or drag across blocks to clear them immediately.';
+  }
+
   return (
     <section className="composer-card" aria-label="Activity and category controls">
       <div className="composer-top-row">
@@ -53,22 +69,34 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
             className={`tool-btn ${interactionTool === 'select' ? 'active' : ''}`}
             aria-pressed={interactionTool === 'select'}
             onClick={() => onChangeTool('select')}
+            title="Select and edit a single block"
           >
-            Select &amp; Edit
+            Select
+          </button>
+          <button
+            type="button"
+            className={`tool-btn ${interactionTool === 'range' ? 'active' : ''}`}
+            aria-pressed={interactionTool === 'range'}
+            onClick={() => onChangeTool('range')}
+            title="Tap start block, then tap end block to select range"
+          >
+            Range (2-Tap)
           </button>
           <button
             type="button"
             className={`tool-btn ${interactionTool === 'paint' ? 'active' : ''}`}
             aria-pressed={interactionTool === 'paint'}
             onClick={() => onChangeTool('paint')}
+            title="Tap or drag to paint blocks immediately"
           >
-            Quick Paint Brush
+            Paint Brush
           </button>
           <button
             type="button"
             className={`tool-btn tool-erase ${interactionTool === 'erase' ? 'active' : ''}`}
             aria-pressed={interactionTool === 'erase'}
             onClick={() => onChangeTool('erase')}
+            title="Tap or drag to clear blocks"
           >
             Eraser
           </button>
@@ -78,6 +106,16 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
           {hasSelection ? (
             <div className="selection-pill-group">
               <span className="selection-badge">Selected: {selectionRangeLabel}</span>
+              {sortedSelection.length === 1 && interactionTool === 'select' && onStartRangeFromSelection && (
+                <button
+                  type="button"
+                  className="extend-range-btn"
+                  onClick={onStartRangeFromSelection}
+                  title="Tap another block to extend range"
+                >
+                  + Extend to next tap
+                </button>
+              )}
               <button
                 type="button"
                 className="text-link-btn"
@@ -88,13 +126,7 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
               </button>
             </div>
           ) : (
-            <span className="composer-hint">
-              {interactionTool === 'paint'
-                ? 'Tap or drag across blocks to paint immediately with the selected category & activity.'
-                : interactionTool === 'erase'
-                  ? 'Tap or drag across blocks to clear them.'
-                  : 'Tap a block (or Shift+tap a second block) to select a time range and log an activity.'}
-            </span>
+            <span className="composer-hint">{toolHint}</span>
           )}
         </div>
       </div>
@@ -118,7 +150,7 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
               }
               onClick={() => {
                 onSelectCategory(cat.id);
-                if (hasSelection && interactionTool === 'select') {
+                if (hasSelection && (interactionTool === 'select' || interactionTool === 'range')) {
                   onApplyToSelection(cat.id);
                 }
               }}
