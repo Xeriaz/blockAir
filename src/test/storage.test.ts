@@ -4,6 +4,7 @@ import {
   clearBlocksInDay,
   createEmptyStore,
   fillCustomSleepBlocks,
+  fillCustomWorkBlocks,
   fillNightSleepBlocks,
   loadStore,
   saveStore,
@@ -89,6 +90,30 @@ describe('storage persistence utilities', () => {
     dayBlocks = store.days['2026-11-17'].blocks;
     expect(dayBlocks[140].categoryId).toBe('sleep');
     expect(dayBlocks[140].label).toBe('Full sleep');
+  });
+
+  it('fills custom work blocks during daytime hours with chosen category', () => {
+    let store = createEmptyStore();
+    // 09:00 to 17:00 = 8 hours = 48 blocks (blocks 54 to 101)
+    const res = fillCustomWorkBlocks(
+      store,
+      '2026-11-17',
+      '09:00',
+      '17:00',
+      'deep-work',
+      false,
+      'Core focus'
+    );
+    expect(res.filledCount).toBe(48);
+    expect(res.totalCount).toBe(48);
+    store = res.updatedStore;
+
+    const dayBlocks = store.days['2026-11-17'].blocks;
+    expect(Object.keys(dayBlocks)).toHaveLength(48);
+    expect(dayBlocks[54].categoryId).toBe('deep-work');
+    expect(dayBlocks[54].label).toBe('Core focus');
+    expect(dayBlocks[101].categoryId).toBe('deep-work');
+    expect(dayBlocks[102]).toBeUndefined(); // 17:00..17:10 is not in 09:00..17:00
   });
 
   it('recovers gracefully when localStorage contains malformed JSON or out-of-range block keys', () => {

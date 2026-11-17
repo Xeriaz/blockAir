@@ -8,6 +8,7 @@ import {
   assignBlocksInDay,
   clearBlocksInDay,
   fillCustomSleepBlocks,
+  fillCustomWorkBlocks,
   loadStore,
   saveStore,
   setDayReflection,
@@ -264,6 +265,29 @@ export const App: React.FC = () => {
     );
   };
 
+  const handleFillCustomWork = (options: {
+    startTime: string;
+    endTime: string;
+    categoryId: string;
+    overwriteExisting: boolean;
+    label: string;
+  }) => {
+    const result = fillCustomWorkBlocks(
+      store,
+      selectedDateKey,
+      options.startTime,
+      options.endTime,
+      options.categoryId,
+      options.overwriteExisting,
+      options.label
+    );
+    setStore(result.updatedStore);
+    const dur = formatDurationMinutes(result.filledCount * MINUTES_PER_BLOCK);
+    announceFeedback(
+      `Pre-filled ${result.filledCount} work blocks (${dur}) for ${options.startTime}–${options.endTime}`
+    );
+  };
+
   const handleClearEntireDay = () => {
     const allIndices = Array.from({ length: BLOCKS_PER_DAY }, (_, i) => i);
     setStore((prev) => clearBlocksInDay(prev, selectedDateKey, allIndices));
@@ -388,6 +412,7 @@ export const App: React.FC = () => {
             setStore((prev) => setDayReflection(prev, selectedDateKey, val))
           }
           onFillCustomSleep={handleFillCustomSleep}
+          onFillCustomWork={handleFillCustomWork}
           onClearEntireDay={handleClearEntireDay}
         />
       </main>

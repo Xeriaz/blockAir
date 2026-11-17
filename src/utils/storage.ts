@@ -237,27 +237,29 @@ export function setDayReflection(
 }
 
 /**
- * Fills sleep blocks between selectable start and end times (e.g. 23:00 to 07:00).
+ * Fills blocks between selectable start and end times for any category.
  */
-export function fillCustomSleepBlocks(
+export function fillCustomRangeBlocks(
   store: AppDataStore,
   dateKey: string,
   startTime: string,
   endTime: string,
+  categoryId: string,
   overwriteExisting = false,
-  label = 'Night sleep'
+  label?: string
 ): { updatedStore: AppDataStore; filledCount: number; totalCount: number } {
   const targetIndices = computeBlocksForTimeRange(startTime, endTime);
   const existingDay = store.days[dateKey] ?? { dateKey, blocks: {} };
   const nextBlocks: Record<number, BlockEntry> = { ...existingDay.blocks };
   const now = Date.now();
   let filledCount = 0;
+  const cleanedLabel = label?.trim() ? label.trim().slice(0, 120) : undefined;
 
   for (const idx of targetIndices) {
     if (!overwriteExisting && nextBlocks[idx]) continue;
     nextBlocks[idx] = {
-      categoryId: 'sleep',
-      label: label.trim() || 'Sleep',
+      categoryId,
+      ...(cleanedLabel ? { label: cleanedLabel } : {}),
       updatedAt: now,
     };
     filledCount += 1;
@@ -278,6 +280,51 @@ export function fillCustomSleepBlocks(
     filledCount,
     totalCount: targetIndices.length,
   };
+}
+
+/**
+ * Fills sleep blocks between selectable start and end times (e.g. 23:00 to 07:00).
+ */
+export function fillCustomSleepBlocks(
+  store: AppDataStore,
+  dateKey: string,
+  startTime: string,
+  endTime: string,
+  overwriteExisting = false,
+  label = 'Night sleep'
+): { updatedStore: AppDataStore; filledCount: number; totalCount: number } {
+  return fillCustomRangeBlocks(
+    store,
+    dateKey,
+    startTime,
+    endTime,
+    'sleep',
+    overwriteExisting,
+    label || 'Night sleep'
+  );
+}
+
+/**
+ * Fills work hours blocks between selectable start and end times (e.g. 09:00 to 17:00).
+ */
+export function fillCustomWorkBlocks(
+  store: AppDataStore,
+  dateKey: string,
+  startTime: string,
+  endTime: string,
+  categoryId = 'deep-work',
+  overwriteExisting = false,
+  label = 'Deep work'
+): { updatedStore: AppDataStore; filledCount: number; totalCount: number } {
+  return fillCustomRangeBlocks(
+    store,
+    dateKey,
+    startTime,
+    endTime,
+    categoryId,
+    overwriteExisting,
+    label || 'Deep work'
+  );
 }
 
 /**

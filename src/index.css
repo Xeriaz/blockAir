@@ -1563,3 +1563,50 @@ textarea:focus-visible {
   margin-top: 0.3rem;
 }
 
+.empty-prefill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.modal-category-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+}
+
+.modal-cat-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: left;
+  transition: all 0.12s ease;
+}
+
+.modal-cat-chip:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.modal-cat-chip.active {
+  background: var(--cat-bg);
+  border-color: var(--cat-border);
+  color: #fff;
+}
+
+.modal-cat-chip .cat-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cat-color);
+  flex-shrink: 0;
+}
+

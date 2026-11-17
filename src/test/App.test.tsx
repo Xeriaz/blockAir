@@ -149,4 +149,46 @@ describe('BlockAir App integration', () => {
       })
     ).toBeInTheDocument();
   });
+
+  it('allows pre-filling work hours with customizable times and category', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Open Work Prefill modal
+    const openWorkBtn = screen.getByRole('button', { name: /Pre-fill Work/i });
+    await user.click(openWorkBtn);
+
+    expect(screen.getByText('Pre-fill Work Hours')).toBeInTheDocument();
+    expect(screen.getByText(/09:00 → 17:00/i)).toBeInTheDocument();
+
+    // Select start preset 08:30 and end preset 16:30 (8 hours = 48 blocks)
+    const start0830 = screen.getByRole('button', { name: '08:30' });
+    const end1630 = screen.getByRole('button', { name: '16:30' });
+    await user.click(start0830);
+    await user.click(end1630);
+
+    expect(screen.getByText(/08:30 → 16:30/i)).toBeInTheDocument();
+
+    const submitBtn = screen.getByRole('button', { name: /Fill Work \(48 Blocks\)/i });
+    await user.click(submitBtn);
+
+    // Verify 08:30 block is Deep Work
+    expect(
+      screen.getByRole('button', {
+        name: /Block 08:30 to 08:40, Deep Work, Deep work/i,
+      })
+    ).toBeInTheDocument();
+    // Verify 08:20 block is still unassigned
+    expect(
+      screen.getByRole('button', {
+        name: /Block 08:20 to 08:30, Unassigned/i,
+      })
+    ).toBeInTheDocument();
+    // Verify 16:20 block is Deep Work
+    expect(
+      screen.getByRole('button', {
+        name: /Block 16:20 to 16:30, Deep Work, Deep work/i,
+      })
+    ).toBeInTheDocument();
+  });
 });
