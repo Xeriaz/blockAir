@@ -66,7 +66,7 @@ describe('SettingsModal and Auto-Prefill App Integration', () => {
     // Check that bedtime blocks (e.g. 23:00) are mapped
     expect(
       screen.getByRole('button', {
-        name: /Block 23:00 to 23:10, Sleep, Night sleep/i,
+        name: /Block 23:00 to 23:10, Sleep & Recovery, Night sleep/i,
       })
     ).toBeInTheDocument();
   });

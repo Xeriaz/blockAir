@@ -103,9 +103,9 @@ describe('timeBlocks utilities', () => {
     const dayRecord = {
       dateKey: '2026-11-17',
       blocks: {
-        54: { categoryId: 'deep-work', label: 'Architecture design', updatedAt: 1 },
-        55: { categoryId: 'deep-work', label: 'Architecture design', updatedAt: 1 },
-        56: { categoryId: 'deep-work', label: 'Architecture design', updatedAt: 1 },
+        54: { categoryId: 'focus', label: 'Architecture design', updatedAt: 1 },
+        55: { categoryId: 'focus', label: 'Architecture design', updatedAt: 1 },
+        56: { categoryId: 'focus', label: 'Architecture design', updatedAt: 1 },
         60: { categoryId: 'vitality', label: 'Outdoor run', updatedAt: 1 },
       },
     };
@@ -119,13 +119,13 @@ describe('timeBlocks utilities', () => {
     expect(stats.completionPercent).toBe(3);
 
     expect(stats.categorySummaries).toHaveLength(2);
-    expect(stats.categorySummaries[0].category.id).toBe('deep-work');
+    expect(stats.categorySummaries[0].category.id).toBe('focus');
     expect(stats.categorySummaries[0].blockCount).toBe(3);
     expect(stats.categorySummaries[0].minutes).toBe(30);
 
     expect(stats.topActivities[0]).toEqual({
       label: 'Architecture design',
-      categoryId: 'deep-work',
+      categoryId: 'focus',
       blockCount: 3,
       minutes: 30,
     });

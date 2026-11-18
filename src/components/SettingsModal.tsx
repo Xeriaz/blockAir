@@ -62,8 +62,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // iOS Shortcut builder state
   const [scAction, setScAction] = useState<'log' | 'prefill_sleep' | 'prefill_work'>('log');
-  const [scCategory, setScCategory] = useState<string>('deep-work');
-  const [scLabel, setScLabel] = useState<string>('Deep Work Sprint');
+  const [scCategory, setScCategory] = useState<string>('focus');
+  const [scLabel, setScLabel] = useState<string>('Focus Sprint');
   const [scDuration, setScDuration] = useState<number>(30);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
@@ -603,8 +603,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className={`action-type-btn ${scAction === 'log' ? 'active' : ''}`}
                     onClick={() => {
                       setScAction('log');
-                      setScCategory('deep-work');
-                      setScLabel('Deep Work Sprint');
+                      setScCategory('focus');
+                      setScLabel('Focus Sprint');
                       setScDuration(30);
                     }}
                   >
@@ -648,10 +648,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             } as React.CSSProperties}
                             onClick={() => {
                               setScCategory(cat.id);
-                              if (cat.id === 'vitality' && scLabel === 'Deep Work Sprint') {
+                              if (cat.id === 'vitality' && scLabel === 'Focus Sprint') {
                                 setScLabel('Morning Workout');
-                              } else if (cat.id === 'learning' && scLabel === 'Deep Work Sprint') {
-                                setScLabel('Reading & Practice');
+                              } else if (cat.id === 'ops' && scLabel === 'Focus Sprint') {
+                                setScLabel('Team Standup');
                               }
                             }}
                           >
@@ -768,7 +768,7 @@ Method:   POST
 Headers:  Content-Type: application/json
 Body:
 {
-  "category": "deep-work",
+  "category": "focus",
   "label": "Focus sprint",
   "blocks": 3
 }`}

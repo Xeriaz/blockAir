@@ -4,6 +4,13 @@ import { formatBlockRange } from '../utils/timeBlocks';
 
 export type InteractionTool = 'select' | 'range' | 'paint' | 'erase';
 
+export const DEFAULT_ACTIVITY_TAGS: Record<string, string[]> = {
+  focus: ['Deep Work', 'Coding', 'Learning', 'Writing', 'Planning'],
+  ops: ['Meetings', 'Admin', 'Errands', 'Email', 'Logistics'],
+  vitality: ['Workout', 'Meals', 'Family', 'Rest', 'Walk'],
+  sleep: ['Night sleep', 'Nap', 'Wind-down'],
+};
+
 interface BlockComposerProps {
   categories: Category[];
   activeCategoryId: string;
@@ -11,10 +18,11 @@ interface BlockComposerProps {
   interactionTool: InteractionTool;
   selectedBlocks: number[];
   rangeAnchor: number | null;
+  recentLabelsByState?: Record<string, string[]>;
   onSelectCategory: (categoryId: string) => void;
   onChangeActivityDraft: (value: string) => void;
   onChangeTool: (tool: InteractionTool) => void;
-  onApplyToSelection: (categoryId?: string) => void;
+  onApplyToSelection: (categoryId?: string, customLabel?: string) => void;
   onDeleteSelection: () => void;
   onClearSelection: () => void;
   onStartRangeFromSelection?: () => void;
@@ -27,6 +35,7 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
   interactionTool,
   selectedBlocks,
   rangeAnchor,
+  recentLabelsByState,
   onSelectCategory,
   onChangeActivityDraft,
   onChangeTool,
@@ -40,6 +49,28 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
   const selectionRangeLabel = hasSelection
     ? formatBlockRange(sortedSelection[0], sortedSelection[sortedSelection.length - 1])
     : null;
+
+  const defaultTags = DEFAULT_ACTIVITY_TAGS[activeCategoryId] ?? [];
+  const userRecent = recentLabelsByState?.[activeCategoryId] ?? [];
+  const mergedTags = React.useMemo(() => {
+    const list = [...defaultTags];
+    for (const tag of userRecent) {
+      if (
+        tag &&
+        !list.some((existing) => existing.toLowerCase() === tag.toLowerCase())
+      ) {
+        list.push(tag);
+      }
+    }
+    return list;
+  }, [activeCategoryId, defaultTags, userRecent]);
+
+  const handleTagClick = (tag: string) => {
+    onChangeActivityDraft(tag);
+    if (hasSelection && (interactionTool === 'select' || interactionTool === 'range')) {
+      onApplyToSelection(activeCategoryId, tag);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,6 +197,28 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
           );
         })}
       </div>
+
+      {mergedTags.length > 0 && (
+        <div className="quick-tags-container" aria-label="Quick activity suggestions">
+          <div className="quick-tags-strip" role="group" aria-label="Quick activity tags">
+            {mergedTags.map((tag) => {
+              const isActive = activityDraft.trim().toLowerCase() === tag.toLowerCase();
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`quick-tag-chip ${isActive ? 'active' : ''}`}
+                  onClick={() => handleTagClick(tag)}
+                  title={`Select "${tag}"`}
+                >
+                  <span className="tag-hash" aria-hidden="true">#</span>
+                  <span>{tag}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <form className="activity-form" onSubmit={handleSubmit}>
         <div className="activity-input-wrap">

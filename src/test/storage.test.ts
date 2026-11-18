@@ -7,16 +7,81 @@ import {
   fillCustomWorkBlocks,
   fillNightSleepBlocks,
   loadStore,
+  migrateCategoryId,
   saveStore,
   setDayReflection,
   STORAGE_KEY,
 } from '../utils/storage';
 
-describe('storage persistence utilities', () => {
+describe('storage persistence utilities and migration', () => {
+  it('correctly migrates legacy category IDs to the 4 Core States', () => {
+    // deep-work and learning -> focus
+    expect(migrateCategoryId('deep-work')).toBe('focus');
+    expect(migrateCategoryId('learning')).toBe('focus');
+    expect(migrateCategoryId('focus')).toBe('focus');
+
+    // essentials -> ops
+    expect(migrateCategoryId('essentials')).toBe('ops');
+    expect(migrateCategoryId('ops')).toBe('ops');
+
+    // vitality, connection, recharge -> vitality
+    expect(migrateCategoryId('vitality')).toBe('vitality');
+    expect(migrateCategoryId('connection')).toBe('vitality');
+    expect(migrateCategoryId('recharge')).toBe('vitality');
+
+    // sleep -> sleep
+    expect(migrateCategoryId('sleep')).toBe('sleep');
+  });
+
+  it('automatically migrates legacy category IDs when loading from localStorage', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        days: {
+          '2026-11-15': {
+            blocks: {
+              0: { categoryId: 'sleep', label: 'Night nap' },
+              54: { categoryId: 'deep-work', label: 'Code feature' },
+              60: { categoryId: 'learning', label: 'Read docs' },
+              72: { categoryId: 'essentials', label: 'Status sync' },
+              90: { categoryId: 'connection', label: 'Coffee with team' },
+              100: { categoryId: 'recharge', label: 'Meditation' },
+              110: { categoryId: 'vitality', label: 'Evening jog' },
+            },
+          },
+        },
+        settings: {
+          work: {
+            categoryId: 'deep-work',
+            label: 'Deep work sprint',
+          },
+        },
+      })
+    );
+
+    const store = loadStore();
+    const blocks = store.days['2026-11-15'].blocks;
+
+    // Zero historical blocks lost, all mapped to 4 core states
+    expect(blocks[0].categoryId).toBe('sleep');
+    expect(blocks[54].categoryId).toBe('focus');
+    expect(blocks[54].label).toBe('Code feature');
+    expect(blocks[60].categoryId).toBe('focus');
+    expect(blocks[72].categoryId).toBe('ops');
+    expect(blocks[72].label).toBe('Status sync');
+    expect(blocks[90].categoryId).toBe('vitality');
+    expect(blocks[100].categoryId).toBe('vitality');
+    expect(blocks[110].categoryId).toBe('vitality');
+
+    // Settings category migrated too
+    expect(store.settings?.work.categoryId).toBe('focus');
+  });
+
   it('saves and reloads day records from localStorage', () => {
     let store = createEmptyStore();
     store = assignBlocksInDay(store, '2026-11-17', [48, 49, 50], {
-      categoryId: 'deep-work',
+      categoryId: 'focus',
       label: 'Build BlockAir PWA',
     });
     store = setDayReflection(store, '2026-11-17', 'Great morning focus session.');
@@ -26,7 +91,7 @@ describe('storage persistence utilities', () => {
     const hydrated = loadStore();
     expect(hydrated.days['2026-11-17']).toBeDefined();
     expect(Object.keys(hydrated.days['2026-11-17'].blocks)).toHaveLength(3);
-    expect(hydrated.days['2026-11-17'].blocks[48].categoryId).toBe('deep-work');
+    expect(hydrated.days['2026-11-17'].blocks[48].categoryId).toBe('focus');
     expect(hydrated.days['2026-11-17'].blocks[48].label).toBe('Build BlockAir PWA');
     expect(hydrated.days['2026-11-17'].reflection).toBe('Great morning focus session.');
   });
@@ -34,7 +99,7 @@ describe('storage persistence utilities', () => {
   it('clears individual blocks cleanly without affecting remaining blocks', () => {
     let store = createEmptyStore();
     store = assignBlocksInDay(store, '2026-11-17', [10, 11, 12], {
-      categoryId: 'learning',
+      categoryId: 'focus',
       label: 'TypeScript study',
     });
     store = clearBlocksInDay(store, '2026-11-17', [11]);
@@ -47,14 +112,14 @@ describe('storage persistence utilities', () => {
   it('fills 44 night sleep blocks without overwriting existing blocks', () => {
     let store = createEmptyStore();
     store = assignBlocksInDay(store, '2026-11-17', [0], {
-      categoryId: 'deep-work',
+      categoryId: 'focus',
       label: 'Late night deploy',
     });
     store = fillNightSleepBlocks(store, '2026-11-17', false);
 
     const blocks = store.days['2026-11-17'].blocks;
     expect(Object.keys(blocks)).toHaveLength(44);
-    expect(blocks[0].categoryId).toBe('deep-work');
+    expect(blocks[0].categoryId).toBe('focus');
     expect(blocks[1].categoryId).toBe('sleep');
     expect(blocks[35].categoryId).toBe('sleep');
     expect(blocks[36]).toBeUndefined(); // 06:00 waking start
@@ -63,9 +128,9 @@ describe('storage persistence utilities', () => {
 
   it('fills custom sleep blocks with specified start and end times and supports overwrite', () => {
     let store = createEmptyStore();
-    // Pre-assign block 140 (23:20) with deep work
+    // Pre-assign block 140 (23:20) with focus
     store = assignBlocksInDay(store, '2026-11-17', [140], {
-      categoryId: 'deep-work',
+      categoryId: 'focus',
       label: 'Midnight coding',
     });
 
@@ -77,8 +142,8 @@ describe('storage persistence utilities', () => {
 
     let dayBlocks = store.days['2026-11-17'].blocks;
     expect(Object.keys(dayBlocks)).toHaveLength(48);
-    // Block 140 retained its deep-work activity
-    expect(dayBlocks[140].categoryId).toBe('deep-work');
+    // Block 140 retained its focus activity
+    expect(dayBlocks[140].categoryId).toBe('focus');
     expect(dayBlocks[138].categoryId).toBe('sleep');
     expect(dayBlocks[138].label).toBe('Night rest');
 
@@ -100,7 +165,7 @@ describe('storage persistence utilities', () => {
       '2026-11-17',
       '09:00',
       '17:00',
-      'deep-work',
+      'focus',
       false,
       'Core focus'
     );
@@ -110,9 +175,9 @@ describe('storage persistence utilities', () => {
 
     const dayBlocks = store.days['2026-11-17'].blocks;
     expect(Object.keys(dayBlocks)).toHaveLength(48);
-    expect(dayBlocks[54].categoryId).toBe('deep-work');
+    expect(dayBlocks[54].categoryId).toBe('focus');
     expect(dayBlocks[54].label).toBe('Core focus');
-    expect(dayBlocks[101].categoryId).toBe('deep-work');
+    expect(dayBlocks[101].categoryId).toBe('focus');
     expect(dayBlocks[102]).toBeUndefined(); // 17:00..17:10 is not in 09:00..17:00
   });
 
@@ -128,8 +193,8 @@ describe('storage persistence utilities', () => {
         days: {
           '2026-11-17': {
             blocks: {
-              '999': { categoryId: 'deep-work' },
-              '-3': { categoryId: 'deep-work' },
+              '999': { categoryId: 'focus' },
+              '-3': { categoryId: 'focus' },
               '42': { categoryId: 'vitality', label: 'Morning walk' },
             },
           },

@@ -41,7 +41,7 @@ describe('BlockAir App integration', () => {
 
     expect(
       screen.getByRole('button', {
-        name: /Block 09:00 to 09:10, Deep Work, Mobile product strategy/i,
+        name: /Block 09:00 to 09:10, Focus & Craft, Mobile product strategy/i,
       })
     ).toBeInTheDocument();
   });
@@ -68,7 +68,7 @@ describe('BlockAir App integration', () => {
     // Overview updates to 30m allocated
     expect(
       screen.getByRole('button', {
-        name: /Block 09:00 to 09:10, Deep Work, Deep architecture session/i,
+        name: /Block 09:00 to 09:10, Focus & Craft, Deep architecture session/i,
       })
     ).toBeInTheDocument();
 
@@ -139,7 +139,7 @@ describe('BlockAir App integration', () => {
     // Verify first hour of sleep (22:00) is marked as sleep
     expect(
       screen.getByRole('button', {
-        name: /Block 22:00 to 22:10, Sleep, Night sleep/i,
+        name: /Block 22:00 to 22:10, Sleep & Recovery, Night sleep/i,
       })
     ).toBeInTheDocument();
     // And waking block (06:00) is unassigned
@@ -172,10 +172,10 @@ describe('BlockAir App integration', () => {
     const submitBtn = screen.getByRole('button', { name: /Fill Work \(48 Blocks\)/i });
     await user.click(submitBtn);
 
-    // Verify 08:30 block is Deep Work
+    // Verify 08:30 block is Focus & Craft
     expect(
       screen.getByRole('button', {
-        name: /Block 08:30 to 08:40, Deep Work, Deep work/i,
+        name: /Block 08:30 to 08:40, Focus & Craft, Focus & Craft/i,
       })
     ).toBeInTheDocument();
     // Verify 08:20 block is still unassigned
@@ -184,10 +184,10 @@ describe('BlockAir App integration', () => {
         name: /Block 08:20 to 08:30, Unassigned/i,
       })
     ).toBeInTheDocument();
-    // Verify 16:20 block is Deep Work
+    // Verify 16:20 block is Focus & Craft
     expect(
       screen.getByRole('button', {
-        name: /Block 16:20 to 16:30, Deep Work, Deep work/i,
+        name: /Block 16:20 to 16:30, Focus & Craft, Focus & Craft/i,
       })
     ).toBeInTheDocument();
   });
@@ -216,7 +216,7 @@ describe('BlockAir App integration', () => {
 
     expect(
       screen.getByRole('button', {
-        name: /Block 07:20 to 07:30, Sleep, Night sleep/i,
+        name: /Block 07:20 to 07:30, Sleep & Recovery, Night sleep/i,
       })
     ).toBeInTheDocument();
 
@@ -231,11 +231,58 @@ describe('BlockAir App integration', () => {
     const fillWork48 = screen.getByRole('button', { name: /Fill Work \(48 Blocks\)/i });
     await user.click(fillWork48);
 
-    // 07:30 block was unassigned so it becomes Early deep work
+    // 07:30 block was unassigned so it becomes Early focus sprint
     expect(
       screen.getByRole('button', {
-        name: /Block 07:30 to 07:40, Deep Work, Early deep work/i,
+        name: /Block 07:30 to 07:40, Focus & Craft, Early focus sprint/i,
       })
     ).toBeInTheDocument();
+  });
+
+  it('supports quick activity suggestion tags in BlockComposer', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Select block 09:00
+    const block0900 = screen.getByRole('button', { name: /Block 09:00 to 09:10/i });
+    await user.click(block0900);
+
+    // Click quick tag Coding
+    const codingTag = screen.getByRole('button', { name: /Coding/i });
+    await user.click(codingTag);
+
+    // Block 09:00 should immediately have Focus & Craft: Coding
+    expect(
+      screen.getByRole('button', {
+        name: /Block 09:00 to 09:10, Focus & Craft, Coding/i,
+      })
+    ).toBeInTheDocument();
+  });
+
+  it('switches seamlessly to Trends & Stats view and back to Day Grid', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Switch to Trends & Stats view via switcher in header
+    const trendsTab = screen.getByRole('tab', { name: /Trends & Stats/i });
+    await user.click(trendsTab);
+
+    // Trends view heading and sections should be visible
+    expect(screen.getByText(/Trends & Multi-Day Statistics/i)).toBeInTheDocument();
+    expect(screen.getByText(/Daily State Balance/i)).toBeInTheDocument();
+    expect(screen.getByText(/24-Hour Circadian Rhythm Heatmap/i)).toBeInTheDocument();
+    expect(screen.getByText(/Weekdays vs\. Weekends Split/i)).toBeInTheDocument();
+    expect(screen.getByText(/Top Activities Leaderboard/i)).toBeInTheDocument();
+
+    // Switch between 7-Day and 30-Day
+    const btn30Days = screen.getByRole('button', { name: /30-Day View/i });
+    await user.click(btn30Days);
+    expect(btn30Days).toHaveClass('active');
+
+    // Switch back to Day Grid
+    const gridTab = screen.getByRole('tab', { name: /Day Grid/i });
+    await user.click(gridTab);
+
+    expect(screen.getByText('24-Hour Grid · 144 Blocks')).toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import {
   DEFAULT_SETTINGS,
   fillCustomSleepBlocks,
   fillCustomWorkBlocks,
+  migrateCategoryId,
 } from './storage';
 import {
   BLOCKS_PER_DAY,
@@ -32,6 +33,10 @@ export function resolveCategory(
 ): Category {
   if (!queryVal) return categories[0];
   const normalized = queryVal.trim().toLowerCase();
+  const migrated = migrateCategoryId(normalized);
+
+  const byMigratedId = categories.find((c) => c.id.toLowerCase() === migrated);
+  if (byMigratedId) return byMigratedId;
 
   const byId = categories.find((c) => c.id.toLowerCase() === normalized);
   if (byId) return byId;

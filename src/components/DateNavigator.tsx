@@ -6,9 +6,11 @@ interface DateNavigatorProps {
   todayDateKey: string;
   clock24h: string;
   currentBlockIndex: number;
+  activeView?: 'grid' | 'trends';
   onSelectDate: (dateKey: string) => void;
   onShiftDate: (deltaDays: number) => void;
   onOpenSettings?: () => void;
+  onChangeView?: (view: 'grid' | 'trends') => void;
 }
 
 export const DateNavigator: React.FC<DateNavigatorProps> = ({
@@ -16,9 +18,11 @@ export const DateNavigator: React.FC<DateNavigatorProps> = ({
   todayDateKey,
   clock24h,
   currentBlockIndex,
+  activeView = 'grid',
   onSelectDate,
   onShiftDate,
   onOpenSettings,
+  onChangeView,
 }) => {
   const { primary, secondary, relativeBadge, isToday } = formatHumanDate(
     selectedDateKey,
@@ -134,6 +138,31 @@ export const DateNavigator: React.FC<DateNavigatorProps> = ({
             </button>
           )}
         </div>
+
+        {onChangeView && (
+          <div className="view-mode-switcher" role="tablist" aria-label="Main view switcher">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === 'grid'}
+              className={`view-tab-btn ${activeView === 'grid' ? 'active' : ''}`}
+              onClick={() => onChangeView('grid')}
+            >
+              <span className="tab-icon" aria-hidden="true">▦</span>
+              <span>Day Grid</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === 'trends'}
+              className={`view-tab-btn ${activeView === 'trends' ? 'active' : ''}`}
+              onClick={() => onChangeView('trends')}
+            >
+              <span className="tab-icon" aria-hidden="true">📈</span>
+              <span>Trends & Stats</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

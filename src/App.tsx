@@ -4,7 +4,9 @@ import { BlockGrid } from './components/BlockGrid';
 import { DateNavigator } from './components/DateNavigator';
 import { DayOverview } from './components/DayOverview';
 import { SettingsModal } from './components/SettingsModal';
+import { TrendsView } from './components/TrendsView';
 import type { AppDataStore, UserSettings } from './types/blockair';
+import { getRecentLabelsByState } from './utils/analytics';
 import {
   assignBlocksInDay,
   autoPrefillDay,
@@ -47,6 +49,7 @@ export const App: React.FC = () => {
   const [currentBlockIndex, setCurrentBlockIndex] = useState<number>(() =>
     getCurrentBlockIndex(new Date())
   );
+  const [activeView, setActiveView] = useState<'grid' | 'trends'>('grid');
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>(DEFAULT_CATEGORIES[0].id);
   const [activityDraft, setActivityDraft] = useState<string>('');
@@ -193,11 +196,18 @@ export const App: React.FC = () => {
     }
   };
 
-  const applyCategoryAndNoteToBlocks = (targetBlocks: number[], overrideCategoryId?: string) => {
+  const recentLabelsByState = useMemo(() => getRecentLabelsByState(store, 4), [store]);
+
+  const applyCategoryAndNoteToBlocks = (
+    targetBlocks: number[],
+    overrideCategoryId?: string,
+    overrideLabel?: string
+  ) => {
     if (targetBlocks.length === 0) return;
     const categoryIdToUse = overrideCategoryId ?? activeCategoryId;
     const categoryName = categoryMap[categoryIdToUse]?.name ?? categoryIdToUse;
-    const trimmedNote = activityDraft.trim();
+    const labelToUse = overrideLabel !== undefined ? overrideLabel : activityDraft;
+    const trimmedNote = labelToUse.trim();
 
     setStore((prev) =>
       assignBlocksInDay(prev, selectedDateKey, targetBlocks, {
@@ -472,69 +482,84 @@ export const App: React.FC = () => {
         todayDateKey={todayDateKey}
         clock24h={clock24h}
         currentBlockIndex={currentBlockIndex}
+        activeView={activeView}
+        onChangeView={setActiveView}
         onSelectDate={handleSelectDate}
         onShiftDate={handleShiftDate}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
 
       <main className="main-workspace">
-        <div className="primary-column">
-          <BlockComposer
-            categories={DEFAULT_CATEGORIES}
-            activeCategoryId={activeCategoryId}
-            activityDraft={activityDraft}
-            interactionTool={interactionTool}
-            selectedBlocks={selectedBlocks}
-            rangeAnchor={rangeAnchor}
-            onSelectCategory={setActiveCategoryId}
-            onChangeActivityDraft={setActivityDraft}
-            onChangeTool={handleChangeTool}
-            onApplyToSelection={(overrideCatId) =>
-              applyCategoryAndNoteToBlocks(selectedBlocks, overrideCatId)
-            }
-            onDeleteSelection={() => {
-              deleteBlocks(selectedBlocks);
-              setSelectedBlocks([]);
-              setSelectionAnchor(null);
-              setRangeAnchor(null);
-            }}
-            onClearSelection={() => {
-              setSelectedBlocks([]);
-              setSelectionAnchor(null);
-              setRangeAnchor(null);
-            }}
-            onStartRangeFromSelection={handleStartRangeFromSelection}
-          />
+        {activeView === 'grid' ? (
+          <>
+            <div className="primary-column">
+              <BlockComposer
+                categories={DEFAULT_CATEGORIES}
+                activeCategoryId={activeCategoryId}
+                activityDraft={activityDraft}
+                interactionTool={interactionTool}
+                selectedBlocks={selectedBlocks}
+                rangeAnchor={rangeAnchor}
+                recentLabelsByState={recentLabelsByState}
+                onSelectCategory={setActiveCategoryId}
+                onChangeActivityDraft={setActivityDraft}
+                onChangeTool={handleChangeTool}
+                onApplyToSelection={(overrideCatId, overrideLabel) =>
+                  applyCategoryAndNoteToBlocks(selectedBlocks, overrideCatId, overrideLabel)
+                }
+                onDeleteSelection={() => {
+                  deleteBlocks(selectedBlocks);
+                  setSelectedBlocks([]);
+                  setSelectionAnchor(null);
+                  setRangeAnchor(null);
+                }}
+                onClearSelection={() => {
+                  setSelectedBlocks([]);
+                  setSelectionAnchor(null);
+                  setRangeAnchor(null);
+                }}
+                onStartRangeFromSelection={handleStartRangeFromSelection}
+              />
 
-          <BlockGrid
-            blocks={dayBlocks}
-            categories={DEFAULT_CATEGORIES}
-            selectedBlocks={selectedBlocks}
-            rangeAnchor={rangeAnchor}
-            currentBlockIndex={isViewingToday ? currentBlockIndex : null}
-            interactionTool={interactionTool}
-            highlightedCategoryId={highlightedCategoryId}
-            onBlockInteract={handleBlockInteract}
-            onBlockDragOver={handleBlockDragOver}
-            onSelectHourRow={handleSelectHourRow}
-          />
-        </div>
+              <BlockGrid
+                blocks={dayBlocks}
+                categories={DEFAULT_CATEGORIES}
+                selectedBlocks={selectedBlocks}
+                rangeAnchor={rangeAnchor}
+                currentBlockIndex={isViewingToday ? currentBlockIndex : null}
+                interactionTool={interactionTool}
+                highlightedCategoryId={highlightedCategoryId}
+                onBlockInteract={handleBlockInteract}
+                onBlockDragOver={handleBlockDragOver}
+                onSelectHourRow={handleSelectHourRow}
+              />
+            </div>
 
-        <DayOverview
-          stats={overviewStats}
-          categories={DEFAULT_CATEGORIES}
-          reflection={dayReflection}
-          currentBlockIndex={isViewingToday ? currentBlockIndex : null}
-          highlightedCategoryId={highlightedCategoryId}
-          onHighlightCategory={setHighlightedCategoryId}
-          onReflectionChange={(val) =>
-            setStore((prev) => setDayReflection(prev, selectedDateKey, val))
-          }
-          onFillCustomSleep={handleFillCustomSleep}
-          onFillCustomWork={handleFillCustomWork}
-          onClearEntireDay={handleClearEntireDay}
-          onOpenSettings={() => setIsSettingsModalOpen(true)}
-        />
+            <DayOverview
+              stats={overviewStats}
+              categories={DEFAULT_CATEGORIES}
+              reflection={dayReflection}
+              currentBlockIndex={isViewingToday ? currentBlockIndex : null}
+              highlightedCategoryId={highlightedCategoryId}
+              onHighlightCategory={setHighlightedCategoryId}
+              onReflectionChange={(val) =>
+                setStore((prev) => setDayReflection(prev, selectedDateKey, val))
+              }
+              onFillCustomSleep={handleFillCustomSleep}
+              onFillCustomWork={handleFillCustomWork}
+              onClearEntireDay={handleClearEntireDay}
+              onOpenSettings={() => setIsSettingsModalOpen(true)}
+            />
+          </>
+        ) : (
+          <TrendsView
+            store={store}
+            selectedDateKey={selectedDateKey}
+            categories={DEFAULT_CATEGORIES}
+            onSelectDateKey={handleSelectDate}
+            onBackToGrid={() => setActiveView('grid')}
+          />
+        )}
       </main>
 
       <SettingsModal

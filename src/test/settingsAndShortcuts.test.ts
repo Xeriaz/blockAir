@@ -81,8 +81,8 @@ describe('Settings & Auto-Prefill Storage Logic', () => {
         enabled: true,
         startTime: '09:00',
         endTime: '17:00',
-        categoryId: 'deep-work',
-        label: 'Deep work',
+        categoryId: 'focus',
+        label: 'Focus',
         overwriteExisting: false,
         daysOfWeek: [1, 2, 3, 4, 5],
       },
@@ -100,8 +100,8 @@ describe('Settings & Auto-Prefill Storage Logic', () => {
     expect(day.autoPrefilled).toBe(true);
     // Block 0 (00:00) should be sleep
     expect(day.blocks[0].categoryId).toBe('sleep');
-    // Block 54 (09:00) should be deep-work
-    expect(day.blocks[54].categoryId).toBe('deep-work');
+    // Block 54 (09:00) should be focus
+    expect(day.blocks[54].categoryId).toBe('focus');
   });
 
   it('skips work routine on weekends if daysOfWeek is set to weekdays only', () => {
@@ -119,8 +119,8 @@ describe('Settings & Auto-Prefill Storage Logic', () => {
         enabled: true,
         startTime: '09:00',
         endTime: '17:00',
-        categoryId: 'deep-work',
-        label: 'Deep work',
+        categoryId: 'focus',
+        label: 'Focus',
         overwriteExisting: false,
         daysOfWeek: [1, 2, 3, 4, 5], // Mon-Fri
       },
@@ -152,13 +152,17 @@ describe('Settings & Auto-Prefill Storage Logic', () => {
 });
 
 describe('iOS Shortcuts & Deep Link URL Action Handler', () => {
-  it('resolves categories by id or partial name case-insensitively', () => {
-    expect(resolveCategory('deep-work').id).toBe('deep-work');
-    expect(resolveCategory('DEEP-WORK').id).toBe('deep-work');
+  it('resolves categories by id or partial name case-insensitively and supports legacy aliases', () => {
+    expect(resolveCategory('focus').id).toBe('focus');
+    expect(resolveCategory('FOCUS').id).toBe('focus');
+    expect(resolveCategory('deep-work').id).toBe('focus');
+    expect(resolveCategory('learning').id).toBe('focus');
+    expect(resolveCategory('ops').id).toBe('ops');
+    expect(resolveCategory('essentials').id).toBe('ops');
     expect(resolveCategory('vitality').id).toBe('vitality');
-    expect(resolveCategory('movement').id).toBe('vitality');
-    expect(resolveCategory('learning').id).toBe('learning');
-    expect(resolveCategory('unknown-xyz').id).toBe('deep-work');
+    expect(resolveCategory('connection').id).toBe('vitality');
+    expect(resolveCategory('sleep').id).toBe('sleep');
+    expect(resolveCategory('unknown-xyz').id).toBe('focus');
   });
 
   it('builds valid iOS Shortcut URLs with custom query parameters', () => {
@@ -183,7 +187,7 @@ describe('iOS Shortcuts & Deep Link URL Action Handler', () => {
 
     expect(result.handled).toBe(true);
     expect(result.message).toContain('Morning Run');
-    expect(result.message).toContain('Movement & Vitality');
+    expect(result.message).toContain('Vitality & Life');
 
     const day = result.updatedStore.days[activeDateKey];
     expect(day.blocks[42]?.categoryId).toBe('vitality');
@@ -198,15 +202,15 @@ describe('iOS Shortcuts & Deep Link URL Action Handler', () => {
     const store = createEmptyStore();
     const activeDateKey = '2026-11-18';
     // 09:30 is block 57 (9 * 6 + 3 = 57)
-    const query = '?action=log&category=deep-work&label=Architecture+Design&time=09:30&duration=20';
+    const query = '?action=log&category=focus&label=Architecture+Design&time=09:30&duration=20';
 
     const result = parseAndExecuteUrlAction(query, store, activeDateKey);
 
     expect(result.handled).toBe(true);
     const day = result.updatedStore.days[activeDateKey];
-    expect(day.blocks[57]?.categoryId).toBe('deep-work');
+    expect(day.blocks[57]?.categoryId).toBe('focus');
     expect(day.blocks[57]?.label).toBe('Architecture Design');
-    expect(day.blocks[58]?.categoryId).toBe('deep-work');
+    expect(day.blocks[58]?.categoryId).toBe('focus');
     expect(day.blocks[59]).toBeUndefined();
   });
 

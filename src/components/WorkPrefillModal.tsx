@@ -39,8 +39,8 @@ const WORK_ROUTINE_CARDS: WorkRoutinePreset[] = [
     badge: '09:00–17:00 · 8h',
     startTime: '09:00',
     endTime: '17:00',
-    categoryId: 'deep-work',
-    label: 'Deep work',
+    categoryId: 'focus',
+    label: 'Focus & Craft',
   },
   {
     id: 'work-early-bird',
@@ -48,8 +48,8 @@ const WORK_ROUTINE_CARDS: WorkRoutinePreset[] = [
     badge: '48 blocks · 8h',
     startTime: '07:00',
     endTime: '15:00',
-    categoryId: 'deep-work',
-    label: 'Early deep work',
+    categoryId: 'focus',
+    label: 'Early focus sprint',
   },
   {
     id: 'work-night-owl',
@@ -57,7 +57,7 @@ const WORK_ROUTINE_CARDS: WorkRoutinePreset[] = [
     badge: '48 blocks · 8h',
     startTime: '11:00',
     endTime: '19:00',
-    categoryId: 'deep-work',
+    categoryId: 'focus',
     label: 'Late focus sprint',
   },
   {
@@ -66,7 +66,7 @@ const WORK_ROUTINE_CARDS: WorkRoutinePreset[] = [
     badge: '24 blocks · 4h',
     startTime: '08:30',
     endTime: '12:30',
-    categoryId: 'deep-work',
+    categoryId: 'focus',
     label: 'Morning focus sprint',
   },
 ];
@@ -79,8 +79,8 @@ export const WorkPrefillModal: React.FC<WorkPrefillModalProps> = ({
 }) => {
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('17:00');
-  const [categoryId, setCategoryId] = useState('deep-work');
-  const [label, setLabel] = useState('Deep work');
+  const [categoryId, setCategoryId] = useState('focus');
+  const [label, setLabel] = useState('Focus & Craft');
   const [overwriteExisting, setOverwriteExisting] = useState(false);
 
   const titleId = useId();
@@ -256,10 +256,10 @@ export const WorkPrefillModal: React.FC<WorkPrefillModalProps> = ({
                     } as React.CSSProperties}
                     onClick={() => {
                       setCategoryId(cat.id);
-                      if (label === 'Deep work' && cat.id === 'essentials') {
-                        setLabel('Operations & Meetings');
-                      } else if (label === 'Operations & Meetings' && cat.id === 'deep-work') {
-                        setLabel('Deep work');
+                      if (label === 'Focus & Craft' && cat.id === 'ops') {
+                        setLabel('Operations & Admin');
+                      } else if (label === 'Operations & Admin' && cat.id === 'focus') {
+                        setLabel('Focus & Craft');
                       }
                     }}
                   >

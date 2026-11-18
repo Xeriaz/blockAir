@@ -11,6 +11,34 @@ import { BLOCKS_PER_DAY, computeBlocksForTimeRange, parseDateKey } from './timeB
 export const STORAGE_KEY = 'blockair:v1:store';
 export const STORE_VERSION = 1;
 
+/**
+ * Migrates legacy category IDs to the 4 Core States taxonomy.
+ * - deep-work, learning -> focus
+ * - essentials -> ops
+ * - vitality, connection, recharge -> vitality
+ * - sleep -> sleep
+ */
+export function migrateCategoryId(categoryId: string): string {
+  if (!categoryId) return 'focus';
+  const normalized = categoryId.trim().toLowerCase();
+  switch (normalized) {
+    case 'deep-work':
+    case 'deep_work':
+    case 'learning':
+      return 'focus';
+    case 'essentials':
+      return 'ops';
+    case 'vitality':
+    case 'connection':
+    case 'recharge':
+      return 'vitality';
+    case 'sleep':
+      return 'sleep';
+    default:
+      return normalized;
+  }
+}
+
 export const DEFAULT_SETTINGS: UserSettings = {
   autoPrefillEnabled: false,
   sleep: {
@@ -24,8 +52,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     enabled: true,
     startTime: '09:00',
     endTime: '17:00',
-    categoryId: 'deep-work',
-    label: 'Deep work',
+    categoryId: 'focus',
+    label: 'Focus',
     overwriteExisting: false,
     daysOfWeek: [1, 2, 3, 4, 5], // Monday through Friday
   },
@@ -85,7 +113,7 @@ export function sanitizeUserSettings(raw: unknown): UserSettings {
         : DEFAULT_SETTINGS.work.endTime,
     categoryId:
       typeof rawWork.categoryId === 'string' && rawWork.categoryId.trim()
-        ? rawWork.categoryId.trim()
+        ? migrateCategoryId(rawWork.categoryId.trim())
         : DEFAULT_SETTINGS.work.categoryId,
     label:
       typeof rawWork.label === 'string' ? rawWork.label.slice(0, 60) : DEFAULT_SETTINGS.work.label,
@@ -138,7 +166,7 @@ function sanitizeDayRecord(dateKey: string, raw: unknown): DayRecord | null {
         ? entryObj.updatedAt
         : Date.now();
     blocks[Number(k)] = {
-      categoryId: entryObj.categoryId.trim(),
+      categoryId: migrateCategoryId(entryObj.categoryId.trim()),
       ...(label ? { label } : {}),
       updatedAt,
     };
@@ -418,9 +446,9 @@ export function fillCustomWorkBlocks(
   dateKey: string,
   startTime: string,
   endTime: string,
-  categoryId = 'deep-work',
+  categoryId = 'focus',
   overwriteExisting = false,
-  label = 'Deep work'
+  label = 'Focus'
 ): { updatedStore: AppDataStore; filledCount: number; totalCount: number } {
   return fillCustomRangeBlocks(
     store,
@@ -429,7 +457,7 @@ export function fillCustomWorkBlocks(
     endTime,
     categoryId,
     overwriteExisting,
-    label || 'Deep work'
+    label || 'Focus'
   );
 }
 
