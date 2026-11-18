@@ -1,13 +1,113 @@
-import type { AppDataStore, BlockEntry, DayRecord } from '../types/blockair';
-import { BLOCKS_PER_DAY, computeBlocksForTimeRange } from './timeBlocks';
+import type {
+  AppDataStore,
+  BlockEntry,
+  DayRecord,
+  SleepScheduleSettings,
+  UserSettings,
+  WorkScheduleSettings,
+} from '../types/blockair';
+import { BLOCKS_PER_DAY, computeBlocksForTimeRange, parseDateKey } from './timeBlocks';
 
 export const STORAGE_KEY = 'blockair:v1:store';
 export const STORE_VERSION = 1;
+
+export const DEFAULT_SETTINGS: UserSettings = {
+  autoPrefillEnabled: false,
+  sleep: {
+    enabled: true,
+    startTime: '23:00',
+    endTime: '07:00',
+    label: 'Night sleep',
+    overwriteExisting: false,
+  },
+  work: {
+    enabled: true,
+    startTime: '09:00',
+    endTime: '17:00',
+    categoryId: 'deep-work',
+    label: 'Deep work',
+    overwriteExisting: false,
+    daysOfWeek: [1, 2, 3, 4, 5], // Monday through Friday
+  },
+};
+
+export function sanitizeUserSettings(raw: unknown): UserSettings {
+  if (!raw || typeof raw !== 'object') {
+    return { ...DEFAULT_SETTINGS };
+  }
+  const obj = raw as Record<string, unknown>;
+  const autoPrefillEnabled =
+    typeof obj.autoPrefillEnabled === 'boolean'
+      ? obj.autoPrefillEnabled
+      : DEFAULT_SETTINGS.autoPrefillEnabled;
+
+  const rawSleep = (
+    obj.sleep && typeof obj.sleep === 'object' ? obj.sleep : {}
+  ) as Record<string, unknown>;
+  const sleep: SleepScheduleSettings = {
+    enabled:
+      typeof rawSleep.enabled === 'boolean' ? rawSleep.enabled : DEFAULT_SETTINGS.sleep.enabled,
+    startTime:
+      typeof rawSleep.startTime === 'string' && /^\d{1,2}:\d{2}$/.test(rawSleep.startTime)
+        ? rawSleep.startTime
+        : DEFAULT_SETTINGS.sleep.startTime,
+    endTime:
+      typeof rawSleep.endTime === 'string' && /^\d{1,2}:\d{2}$/.test(rawSleep.endTime)
+        ? rawSleep.endTime
+        : DEFAULT_SETTINGS.sleep.endTime,
+    label:
+      typeof rawSleep.label === 'string'
+        ? rawSleep.label.slice(0, 60)
+        : DEFAULT_SETTINGS.sleep.label,
+    overwriteExisting:
+      typeof rawSleep.overwriteExisting === 'boolean'
+        ? rawSleep.overwriteExisting
+        : DEFAULT_SETTINGS.sleep.overwriteExisting,
+  };
+
+  const rawWork = (
+    obj.work && typeof obj.work === 'object' ? obj.work : {}
+  ) as Record<string, unknown>;
+  const daysOfWeek = Array.isArray(rawWork.daysOfWeek)
+    ? rawWork.daysOfWeek.filter((d): d is number => typeof d === 'number' && d >= 0 && d <= 6)
+    : DEFAULT_SETTINGS.work.daysOfWeek;
+
+  const work: WorkScheduleSettings = {
+    enabled:
+      typeof rawWork.enabled === 'boolean' ? rawWork.enabled : DEFAULT_SETTINGS.work.enabled,
+    startTime:
+      typeof rawWork.startTime === 'string' && /^\d{1,2}:\d{2}$/.test(rawWork.startTime)
+        ? rawWork.startTime
+        : DEFAULT_SETTINGS.work.startTime,
+    endTime:
+      typeof rawWork.endTime === 'string' && /^\d{1,2}:\d{2}$/.test(rawWork.endTime)
+        ? rawWork.endTime
+        : DEFAULT_SETTINGS.work.endTime,
+    categoryId:
+      typeof rawWork.categoryId === 'string' && rawWork.categoryId.trim()
+        ? rawWork.categoryId.trim()
+        : DEFAULT_SETTINGS.work.categoryId,
+    label:
+      typeof rawWork.label === 'string' ? rawWork.label.slice(0, 60) : DEFAULT_SETTINGS.work.label,
+    overwriteExisting:
+      typeof rawWork.overwriteExisting === 'boolean'
+        ? rawWork.overwriteExisting
+        : DEFAULT_SETTINGS.work.overwriteExisting,
+    daysOfWeek: daysOfWeek.length > 0 ? daysOfWeek : [1, 2, 3, 4, 5],
+  };
+
+  return {
+    autoPrefillEnabled,
+    sleep,
+    work,
+  };
+}
 
 export function createEmptyStore(): AppDataStore {
   return {
     version: STORE_VERSION,
     days: {},
+    settings: { ...DEFAULT_SETTINGS },
   };
 }
 
@@ -49,10 +149,13 @@ function sanitizeDayRecord(dateKey: string, raw: unknown): DayRecord | null {
       ? candidate.reflection.slice(0, 500)
       : undefined;
 
+  const autoPrefilled = candidate.autoPrefilled === true ? true : undefined;
+
   return {
     dateKey,
     blocks,
     ...(reflection ? { reflection } : {}),
+    ...(autoPrefilled ? { autoPrefilled: true } : {}),
   };
 }
 
@@ -80,9 +183,12 @@ export function loadStore(storage: Storage | undefined = globalThis.localStorage
       }
     }
 
+    const settings = sanitizeUserSettings(record.settings);
+
     return {
       version: STORE_VERSION,
       days,
+      settings,
     };
   } catch {
     return createEmptyStore();
@@ -337,4 +443,130 @@ export function fillNightSleepBlocks(
 ): AppDataStore {
   return fillCustomSleepBlocks(store, dateKey, '22:40', '06:00', overwriteExisting, 'Night sleep')
     .updatedStore;
+}
+
+/**
+ * Updates the user's settings in AppDataStore.
+ */
+export function updateUserSettings(
+  store: AppDataStore,
+  settingsUpdate: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)
+): AppDataStore {
+  const currentSettings = store.settings ?? DEFAULT_SETTINGS;
+  const nextSettings =
+    typeof settingsUpdate === 'function'
+      ? settingsUpdate(currentSettings)
+      : { ...currentSettings, ...settingsUpdate };
+
+  return {
+    ...store,
+    settings: sanitizeUserSettings(nextSettings),
+  };
+}
+
+/**
+ * Automatically prefills sleep and work blocks for a given day based on the user's settings.
+ * - By default (force = false), will NOT modify days that were already prefilled or already have logged blocks.
+ * - When force = true, applies the configured routines immediately (useful for manual 'Apply to Day').
+ */
+export function autoPrefillDay(
+  store: AppDataStore,
+  dateKey: string,
+  force = false
+): {
+  updatedStore: AppDataStore;
+  applied: boolean;
+  filledCount: number;
+  sleepCount: number;
+  workCount: number;
+} {
+  const settings = store.settings ?? DEFAULT_SETTINGS;
+
+  if (!force && !settings.autoPrefillEnabled) {
+    return { updatedStore: store, applied: false, filledCount: 0, sleepCount: 0, workCount: 0 };
+  }
+
+  const existingDay = store.days[dateKey];
+  if (!force) {
+    // Already prefilled or already has blocks logged
+    if (existingDay?.autoPrefilled) {
+      return { updatedStore: store, applied: false, filledCount: 0, sleepCount: 0, workCount: 0 };
+    }
+    if (existingDay && Object.keys(existingDay.blocks).length > 0) {
+      return { updatedStore: store, applied: false, filledCount: 0, sleepCount: 0, workCount: 0 };
+    }
+  }
+
+  let workingStore = store;
+  let sleepCount = 0;
+  let workCount = 0;
+
+  // 1. Fill Sleep schedule
+  if (settings.sleep.enabled) {
+    const sleepRes = fillCustomSleepBlocks(
+      workingStore,
+      dateKey,
+      settings.sleep.startTime,
+      settings.sleep.endTime,
+      force ? (settings.sleep.overwriteExisting ?? true) : settings.sleep.overwriteExisting,
+      settings.sleep.label
+    );
+    workingStore = sleepRes.updatedStore;
+    sleepCount = sleepRes.filledCount;
+  }
+
+  // 2. Fill Work schedule (if day of week matches)
+  const dateObj = parseDateKey(dateKey);
+  const dayOfWeek = dateObj.getDay(); // 0 is Sun, 1 is Mon...
+  if (settings.work.enabled && settings.work.daysOfWeek.includes(dayOfWeek)) {
+    const workRes = fillCustomWorkBlocks(
+      workingStore,
+      dateKey,
+      settings.work.startTime,
+      settings.work.endTime,
+      settings.work.categoryId,
+      force ? (settings.work.overwriteExisting ?? true) : settings.work.overwriteExisting,
+      settings.work.label
+    );
+    workingStore = workRes.updatedStore;
+    workCount = workRes.filledCount;
+  }
+
+  const dayRec = workingStore.days[dateKey] ?? { dateKey, blocks: {} };
+  const updatedStore: AppDataStore = {
+    ...workingStore,
+    days: {
+      ...workingStore.days,
+      [dateKey]: {
+        ...dayRec,
+        autoPrefilled: true,
+      },
+    },
+  };
+
+  return {
+    updatedStore,
+    applied: true,
+    filledCount: sleepCount + workCount,
+    sleepCount,
+    workCount,
+  };
+}
+
+/**
+ * Batch applies auto-prefill across multiple date keys.
+ */
+export function batchPrefillDays(
+  store: AppDataStore,
+  dateKeys: string[],
+  force = false
+): { updatedStore: AppDataStore; totalFilled: number } {
+  let currentStore = store;
+  let totalFilled = 0;
+  for (const dateKey of dateKeys) {
+    const res = autoPrefillDay(currentStore, dateKey, force);
+    currentStore = res.updatedStore;
+    totalFilled += res.filledCount;
+  }
+  return { updatedStore: currentStore, totalFilled };
 }

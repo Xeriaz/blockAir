@@ -31,6 +31,7 @@ interface DayOverviewProps {
     label: string;
   }) => void;
   onClearEntireDay: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const DayOverview: React.FC<DayOverviewProps> = ({
@@ -44,6 +45,7 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
   onFillCustomSleep,
   onFillCustomWork,
   onClearEntireDay,
+  onOpenSettings,
 }) => {
   const [confirmClearDay, setConfirmClearDay] = useState(false);
   const [isSleepModalOpen, setIsSleepModalOpen] = useState(false);
@@ -138,6 +140,16 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
               >
                 💼 Pre-fill Work...
               </button>
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={onOpenSettings}
+                  title="Configure auto-prefill and iOS Shortcuts"
+                >
+                  ⚙️ Settings...
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -235,6 +247,16 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
               >
                 💼 Pre-fill Work...
               </button>
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={onOpenSettings}
+                  title="Configure auto-prefill and iOS Shortcuts"
+                >
+                  ⚙️ Settings...
+                </button>
+              )}
 
               {!confirmClearDay ? (
                 <button

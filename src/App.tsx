@@ -3,15 +3,20 @@ import { BlockComposer, type InteractionTool } from './components/BlockComposer'
 import { BlockGrid } from './components/BlockGrid';
 import { DateNavigator } from './components/DateNavigator';
 import { DayOverview } from './components/DayOverview';
-import type { AppDataStore } from './types/blockair';
+import { SettingsModal } from './components/SettingsModal';
+import type { AppDataStore, UserSettings } from './types/blockair';
 import {
   assignBlocksInDay,
+  autoPrefillDay,
+  batchPrefillDays,
   clearBlocksInDay,
+  DEFAULT_SETTINGS,
   fillCustomSleepBlocks,
   fillCustomWorkBlocks,
   loadStore,
   saveStore,
   setDayReflection,
+  updateUserSettings,
 } from './utils/storage';
 import {
   BLOCKS_PER_DAY,
@@ -26,6 +31,7 @@ import {
   MINUTES_PER_BLOCK,
   shiftDateKey,
 } from './utils/timeBlocks';
+import { parseAndExecuteUrlAction } from './utils/urlActions';
 
 function buildInclusiveRange(a: number, b: number): number[] {
   const start = Math.min(a, b);
@@ -50,6 +56,7 @@ export const App: React.FC = () => {
   const [rangeAnchor, setRangeAnchor] = useState<number | null>(null);
   const [highlightedCategoryId, setHighlightedCategoryId] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
 
   const feedbackTimerRef = useRef<number | null>(null);
 
@@ -66,6 +73,51 @@ export const App: React.FC = () => {
   useEffect(() => {
     saveStore(store);
   }, [store]);
+
+  // Handle iOS Shortcuts / Deep Link actions from URL search or hash
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const search = window.location.search || window.location.hash;
+    if (!search) return;
+
+    const res = parseAndExecuteUrlAction(search, store, selectedDateKey, DEFAULT_CATEGORIES);
+    if (res.handled) {
+      if (res.updatedStore !== store) {
+        setStore(res.updatedStore);
+      }
+      if (res.targetDateKey && res.targetDateKey !== selectedDateKey) {
+        setSelectedDateKey(res.targetDateKey);
+      }
+      if (res.openSettings) {
+        setIsSettingsModalOpen(true);
+      }
+      if (res.message) {
+        announceFeedback(res.message);
+      }
+      try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch {
+        // Safe in test environments
+      }
+    }
+  }, []);
+
+  // Automatically prefill sleep & work schedules if day is unvisited / eligible
+  useEffect(() => {
+    setStore((prevStore) => {
+      const res = autoPrefillDay(prevStore, selectedDateKey, false);
+      if (res.applied && res.filledCount > 0) {
+        const parts: string[] = [];
+        if (res.sleepCount > 0) parts.push('Sleep');
+        if (res.workCount > 0) parts.push('Work');
+        announceFeedback(
+          `✨ Auto-prefilled ${res.filledCount} blocks for daily routines (${parts.join(' & ')})`
+        );
+        return res.updatedStore;
+      }
+      return prevStore;
+    });
+  }, [selectedDateKey]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -297,6 +349,46 @@ export const App: React.FC = () => {
     announceFeedback('Reset all blocks for this day');
   };
 
+  const handleSaveSettings = (nextSettings: UserSettings) => {
+    setStore((prev) => updateUserSettings(prev, nextSettings));
+    announceFeedback('Saved schedule and routine settings');
+  };
+
+  const handleApplySettingsToSelectedDay = () => {
+    const res = autoPrefillDay(store, selectedDateKey, true);
+    setStore(res.updatedStore);
+    announceFeedback(`Applied routine: filled ${res.filledCount} blocks for this day`);
+  };
+
+  const handleApplySettingsToNext7Days = () => {
+    const days: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      days.push(shiftDateKey(selectedDateKey, i));
+    }
+    const res = batchPrefillDays(store, days, true);
+    setStore(res.updatedStore);
+    announceFeedback(`Applied routine across the next 7 days (${res.totalFilled} blocks mapped)`);
+  };
+
+  const handleRunTestShortcutAction = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      const res = parseAndExecuteUrlAction(
+        parsed.search,
+        store,
+        selectedDateKey,
+        DEFAULT_CATEGORIES
+      );
+      if (res.handled) {
+        setStore(res.updatedStore);
+        if (res.targetDateKey) setSelectedDateKey(res.targetDateKey);
+        if (res.message) announceFeedback(res.message);
+      }
+    } catch {
+      announceFeedback('Error running test shortcut action');
+    }
+  };
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -356,6 +448,7 @@ export const App: React.FC = () => {
         currentBlockIndex={currentBlockIndex}
         onSelectDate={handleSelectDate}
         onShiftDate={handleShiftDate}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
 
       <main className="main-workspace">
@@ -414,8 +507,20 @@ export const App: React.FC = () => {
           onFillCustomSleep={handleFillCustomSleep}
           onFillCustomWork={handleFillCustomWork}
           onClearEntireDay={handleClearEntireDay}
+          onOpenSettings={() => setIsSettingsModalOpen(true)}
         />
       </main>
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        categories={DEFAULT_CATEGORIES}
+        settings={store.settings ?? DEFAULT_SETTINGS}
+        onSaveSettings={handleSaveSettings}
+        onApplyToSelectedDay={handleApplySettingsToSelectedDay}
+        onApplyToNext7Days={handleApplySettingsToNext7Days}
+        onRunTestShortcutAction={handleRunTestShortcutAction}
+      />
 
       {feedbackMessage && (
         <div className="toast-banner" role="status" aria-live="polite">

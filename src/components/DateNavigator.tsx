@@ -8,6 +8,7 @@ interface DateNavigatorProps {
   currentBlockIndex: number;
   onSelectDate: (dateKey: string) => void;
   onShiftDate: (deltaDays: number) => void;
+  onOpenSettings?: () => void;
 }
 
 export const DateNavigator: React.FC<DateNavigatorProps> = ({
@@ -17,6 +18,7 @@ export const DateNavigator: React.FC<DateNavigatorProps> = ({
   currentBlockIndex,
   onSelectDate,
   onShiftDate,
+  onOpenSettings,
 }) => {
   const { primary, secondary, relativeBadge, isToday } = formatHumanDate(
     selectedDateKey,
@@ -50,14 +52,29 @@ export const DateNavigator: React.FC<DateNavigatorProps> = ({
           </div>
         </div>
 
-        <div className="live-clock-pill" aria-label={`Current 24-hour time ${clock24h}`}>
-          <span className="clock-dot" aria-hidden="true" />
-          <time className="clock-digits" dateTime={clock24h}>
-            {clock24h}
-          </time>
-          <span className="clock-slot-tag">
-            {activeRange.start}–{activeRange.end}
-          </span>
+        <div className="top-actions-group">
+          <div className="live-clock-pill" aria-label={`Current 24-hour time ${clock24h}`}>
+            <span className="clock-dot" aria-hidden="true" />
+            <time className="clock-digits" dateTime={clock24h}>
+              {clock24h}
+            </time>
+            <span className="clock-slot-tag">
+              {activeRange.start}–{activeRange.end}
+            </span>
+          </div>
+
+          {onOpenSettings && (
+            <button
+              type="button"
+              className="settings-open-btn"
+              onClick={onOpenSettings}
+              aria-label="Open Settings and Routines"
+              title="Settings, Routines & iOS Shortcuts"
+            >
+              <span aria-hidden="true">⚙️</span>
+              <span className="settings-btn-label">Settings</span>
+            </button>
+          )}
         </div>
       </div>
 

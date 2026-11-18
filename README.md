@@ -16,7 +16,16 @@
 - **Day Balance & Reflection:**
   - Live calculation of allocated vs. unassigned hours and blocks.
   - Proportional category distribution bar, top activities list, and a daily reflection journal.
-  - One-tap night sleep filler (`00:00`–`06:00` & `22:40`–`24:00`, 44 blocks).
+  - Quick-action sleep & work routine prefill modals with customizable times and categories.
+- **Routines & Auto-Prefill Settings:**
+  - **Custom Sleep Schedule:** Configure bedtime and wake time (with support for midnight-crossing intervals like `23:00` → `07:00`) and custom labels.
+  - **Custom Work Schedule:** Configure work start/end times, category, and which days of the week work applies to (e.g. Mon–Fri vs Every Day).
+  - **Auto-Prefill Each Day:** When navigating to a new day, BlockAir automatically pre-fills your configured sleep and work routines so your schedule is already structured.
+  - **Batch Prefill:** One-click "Apply to Current Day" and "Apply to Next 7 Days" actions.
+- **iPhone iOS Shortcuts & Automations:**
+  - **Instant Deep-Link Action Handler:** Support for deep links like `?action=log&category=deep-work&label=Focus+Session&duration=30` and `?action=prefill_sleep`.
+  - **Built-in Shortcut Builder:** Interactive URL builder inside Settings with 1-tap clipboard copying and live in-app testing.
+  - **iOS Automations Integration:** Triggered via Apple Shortcuts by Sleep Focus, Wake-Up Alarm stop, Geofence (arriving at office), Action Button, Back Tap, or NFC desk tags.
 - **iPhone 16 Pro & Offline PWA:**
   - Designed for the iPhone 16 Pro viewport (`402 × 874` logical px) with Dynamic Island and Home Indicator safe-area insets (`env(safe-area-inset-*)`).
   - Inputs sized at `16px` to prevent unwanted iOS Safari viewport auto-zoom on focus.
