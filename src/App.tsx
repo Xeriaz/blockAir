@@ -76,31 +76,57 @@ export const App: React.FC = () => {
 
   // Handle iOS Shortcuts / Deep Link actions from URL search or hash
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const search = window.location.search || window.location.hash;
-    if (!search) return;
+    const processUrlAction = () => {
+      if (typeof window === 'undefined') return;
+      const search = window.location.search || window.location.hash;
+      if (!search) return;
 
-    const res = parseAndExecuteUrlAction(search, store, selectedDateKey, DEFAULT_CATEGORIES);
-    if (res.handled) {
-      if (res.updatedStore !== store) {
-        setStore(res.updatedStore);
+      setStore((currentStore) => {
+        const res = parseAndExecuteUrlAction(
+          search,
+          currentStore,
+          selectedDateKey,
+          DEFAULT_CATEGORIES
+        );
+        if (res.handled) {
+          if (res.targetDateKey && res.targetDateKey !== selectedDateKey) {
+            setSelectedDateKey(res.targetDateKey);
+          }
+          if (res.openSettings) {
+            setIsSettingsModalOpen(true);
+          }
+          if (res.message) {
+            announceFeedback(res.message);
+          }
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch {
+            // Safe in test environments
+          }
+          return res.updatedStore;
+        }
+        return currentStore;
+      });
+    };
+
+    processUrlAction();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        processUrlAction();
       }
-      if (res.targetDateKey && res.targetDateKey !== selectedDateKey) {
-        setSelectedDateKey(res.targetDateKey);
-      }
-      if (res.openSettings) {
-        setIsSettingsModalOpen(true);
-      }
-      if (res.message) {
-        announceFeedback(res.message);
-      }
-      try {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      } catch {
-        // Safe in test environments
-      }
-    }
-  }, []);
+    };
+
+    window.addEventListener('popstate', processUrlAction);
+    window.addEventListener('hashchange', processUrlAction);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('popstate', processUrlAction);
+      window.removeEventListener('hashchange', processUrlAction);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [selectedDateKey]);
 
   // Automatically prefill sleep & work schedules if day is unvisited / eligible
   useEffect(() => {

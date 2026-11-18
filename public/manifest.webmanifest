@@ -40,5 +40,35 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log Focus Block",
+      "short_name": "Focus",
+      "description": "Log a 30-minute Deep Work block for the current time",
+      "url": "./?action=log&category=deep-work&label=Deep+Work&duration=30",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Log Movement / Workout",
+      "short_name": "Workout",
+      "description": "Log a 30-minute Vitality block for the current time",
+      "url": "./?action=log&category=vitality&label=Workout&duration=30",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pre-fill Sleep",
+      "short_name": "Sleep",
+      "description": "Pre-fill today's sleep schedule",
+      "url": "./?action=prefill_sleep",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Settings & Routines",
+      "short_name": "Settings",
+      "description": "Open settings and routine presets",
+      "url": "./?action=settings",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }
