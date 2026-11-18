@@ -146,6 +146,7 @@ export const BlockComposer: React.FC<BlockComposerProps> = ({
                   '--cat-color': cat.color,
                   '--cat-bg': cat.bgTint,
                   '--cat-border': cat.borderTint,
+                  '--cat-glow': cat.glowTint ?? 'rgba(56, 189, 248, 0.35)',
                 } as React.CSSProperties
               }
               onClick={() => {

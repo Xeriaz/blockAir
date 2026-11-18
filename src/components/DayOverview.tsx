@@ -99,14 +99,18 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
         >
           {stats.categorySummaries.map((item) => {
             const widthPercent = (item.blockCount / stats.totalVisibleBlocks) * 100;
+            const isHighlighted = highlightedCategoryId === item.category.id;
             return (
               <div
                 key={item.category.id}
-                className="distribution-segment"
-                style={{
-                  width: `${widthPercent}%`,
-                  backgroundColor: item.category.color,
-                }}
+                className={`distribution-segment ${isHighlighted ? 'is-highlighted' : ''}`}
+                style={
+                  {
+                    width: `${widthPercent}%`,
+                    backgroundColor: item.category.color,
+                    '--seg-glow': item.category.glowTint ?? 'rgba(56, 189, 248, 0.35)',
+                  } as React.CSSProperties
+                }
                 title={`${item.category.name}: ${formatDurationMinutes(item.minutes)} (${item.blockCount} blocks)`}
               />
             );
@@ -160,6 +164,12 @@ export const DayOverview: React.FC<DayOverviewProps> = ({
                       <button
                         type="button"
                         className={`breakdown-row ${isHighlighted ? 'is-highlighted' : ''}`}
+                        style={
+                          {
+                            '--cat-color': item.category.color,
+                            '--cat-glow': item.category.glowTint ?? 'rgba(56, 189, 248, 0.35)',
+                          } as React.CSSProperties
+                        }
                         onClick={() =>
                           onHighlightCategory(isHighlighted ? null : item.category.id)
                         }

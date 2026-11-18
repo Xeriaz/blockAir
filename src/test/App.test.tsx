@@ -191,4 +191,51 @@ describe('BlockAir App integration', () => {
       })
     ).toBeInTheDocument();
   });
+
+  it('supports 1-Tap Routine Cards for Sleep and Work and quick-jump hour shortcuts', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Verify quick-jump hour shortcuts exist in the 24-hour grid header
+    const jumpNav = screen.getByRole('navigation', { name: /Quick-jump hour shortcuts/i });
+    expect(jumpNav).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Morning/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Afternoon/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Evening/i })).toBeInTheDocument();
+
+    // Test 1-Tap Sleep Routine Card ("7.5h Sleep: 00:00–07:30" -> 45 blocks)
+    const openSleepBtn = screen.getByRole('button', { name: /Pre-fill Sleep/i });
+    await user.click(openSleepBtn);
+
+    const sleepRoutine75 = screen.getByRole('button', { name: /7\.5h Sleep: 00:00–07:30/i });
+    await user.click(sleepRoutine75);
+    expect(screen.getByText(/00:00 → 07:30/i)).toBeInTheDocument();
+
+    const fillSleep45 = screen.getByRole('button', { name: /Fill Sleep \(45 Blocks\)/i });
+    await user.click(fillSleep45);
+
+    expect(
+      screen.getByRole('button', {
+        name: /Block 07:20 to 07:30, Sleep, Night sleep/i,
+      })
+    ).toBeInTheDocument();
+
+    // Test 1-Tap Work Routine Card ("Early Bird 07:00–15:00" -> 48 blocks, preserving existing 07:00-07:30 sleep blocks)
+    const openWorkBtn = screen.getByRole('button', { name: /Pre-fill Work/i });
+    await user.click(openWorkBtn);
+
+    const earlyBirdCard = screen.getByRole('button', { name: /Early Bird 07:00–15:00/i });
+    await user.click(earlyBirdCard);
+    expect(screen.getByText(/07:00 → 15:00/i)).toBeInTheDocument();
+
+    const fillWork48 = screen.getByRole('button', { name: /Fill Work \(48 Blocks\)/i });
+    await user.click(fillWork48);
+
+    // 07:30 block was unassigned so it becomes Early deep work
+    expect(
+      screen.getByRole('button', {
+        name: /Block 07:30 to 07:40, Deep Work, Early deep work/i,
+      })
+    ).toBeInTheDocument();
+  });
 });

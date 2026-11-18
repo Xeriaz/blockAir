@@ -4,6 +4,7 @@ export interface Category {
   color: string;
   bgTint: string;
   borderTint: string;
+  glowTint?: string;
   shortcut: string;
   description: string;
 }

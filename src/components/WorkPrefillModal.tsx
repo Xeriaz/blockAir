@@ -22,6 +22,55 @@ interface WorkPrefillModalProps {
 const WORK_START_PRESETS = ['08:00', '08:30', '09:00', '09:30', '10:00'];
 const WORK_END_PRESETS = ['16:00', '16:30', '17:00', '17:30', '18:00'];
 
+interface WorkRoutinePreset {
+  id: string;
+  title: string;
+  badge: string;
+  startTime: string;
+  endTime: string;
+  categoryId: string;
+  label: string;
+}
+
+const WORK_ROUTINE_CARDS: WorkRoutinePreset[] = [
+  {
+    id: 'work-standard-9-to-5',
+    title: 'Standard 9-to-5',
+    badge: '09:00–17:00 · 8h',
+    startTime: '09:00',
+    endTime: '17:00',
+    categoryId: 'deep-work',
+    label: 'Deep work',
+  },
+  {
+    id: 'work-early-bird',
+    title: 'Early Bird 07:00–15:00',
+    badge: '48 blocks · 8h',
+    startTime: '07:00',
+    endTime: '15:00',
+    categoryId: 'deep-work',
+    label: 'Early deep work',
+  },
+  {
+    id: 'work-night-owl',
+    title: 'Night Owl 11:00–19:00',
+    badge: '48 blocks · 8h',
+    startTime: '11:00',
+    endTime: '19:00',
+    categoryId: 'deep-work',
+    label: 'Late focus sprint',
+  },
+  {
+    id: 'work-morning-sprint',
+    title: 'Morning Sprint 08:30–12:30',
+    badge: '24 blocks · 4h',
+    startTime: '08:30',
+    endTime: '12:30',
+    categoryId: 'deep-work',
+    label: 'Morning focus sprint',
+  },
+];
+
 export const WorkPrefillModal: React.FC<WorkPrefillModalProps> = ({
   isOpen,
   onClose,
@@ -94,8 +143,34 @@ export const WorkPrefillModal: React.FC<WorkPrefillModalProps> = ({
 
         <form onSubmit={handleSubmit} className="modal-form">
           <p className="modal-desc">
-            Select your work start and end time to batch fill blocks with focused time.
+            Tap a 1-tap work schedule or customize start and end hours for batch focus blocks.
           </p>
+
+          <div className="routine-presets-section">
+            <span className="field-label">1-Tap Work Schedules</span>
+            <div className="routine-card-grid" role="group" aria-label="1-Tap Work Schedules">
+              {WORK_ROUTINE_CARDS.map((routine) => {
+                const isSelected =
+                  startTime === routine.startTime && endTime === routine.endTime;
+                return (
+                  <button
+                    key={routine.id}
+                    type="button"
+                    className={`routine-card ${isSelected ? 'active' : ''}`}
+                    onClick={() => {
+                      setStartTime(routine.startTime);
+                      setEndTime(routine.endTime);
+                      setCategoryId(routine.categoryId);
+                      setLabel(routine.label);
+                    }}
+                  >
+                    <span className="routine-card-title">{routine.title}</span>
+                    <span className="routine-card-meta">{routine.badge}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="time-select-grid">
             <div className="time-field-box">

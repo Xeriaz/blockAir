@@ -22,6 +22,13 @@ interface BlockGridProps {
   onSelectHourRow: (blockIndices: number[]) => void;
 }
 
+const HOUR_QUICK_JUMPS = [
+  { id: 'night', label: 'Night', timeHint: '00:00', targetHour: 0 },
+  { id: 'morning', label: 'Morning', timeHint: '06:00', targetHour: 6 },
+  { id: 'afternoon', label: 'Afternoon', timeHint: '12:00', targetHour: 12 },
+  { id: 'evening', label: 'Evening', timeHint: '18:00', targetHour: 18 },
+] as const;
+
 export const BlockGrid: React.FC<BlockGridProps> = ({
   blocks,
   categories,
@@ -41,6 +48,13 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
   const categoryMap = getCategoryMap(categories);
   const hourGroups = groupBlocksByHour();
   const selectedSet = new Set(selectedBlocks);
+
+  const jumpToHour = (targetHour: number) => {
+    const rowEl = gridRef.current?.querySelector<HTMLElement>(`[data-hour-row="${targetHour}"]`);
+    if (rowEl && typeof rowEl.scrollIntoView === 'function') {
+      rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   useEffect(() => {
     const handleGlobalPointerMove = (e: PointerEvent) => {
@@ -96,15 +110,47 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
     }
   };
 
+  const currentHour =
+    currentBlockIndex !== null ? Math.floor(currentBlockIndex / BLOCKS_PER_HOUR) : null;
+
   return (
     <section className="grid-panel" aria-label="Daily time block grid">
       <div className="grid-panel-header">
-        <div className="grid-title-group">
-          <h2 className="panel-title">24-Hour Grid · 144 Blocks</h2>
-          <span className="grid-subtitle">
-            10 min / block · 6 blocks / row · 24 hours (00:00–24:00)
-          </span>
+        <div className="grid-header-top">
+          <div className="grid-title-group">
+            <h2 className="panel-title">24-Hour Grid · 144 Blocks</h2>
+            <span className="grid-subtitle">
+              10 min / block · 6 blocks / row · 24 hours (00:00–24:00)
+            </span>
+          </div>
+
+          <div className="hour-jump-bar" role="navigation" aria-label="Quick-jump hour shortcuts">
+            {HOUR_QUICK_JUMPS.map((jump) => (
+              <button
+                key={jump.id}
+                type="button"
+                className="hour-jump-pill"
+                onClick={() => jumpToHour(jump.targetHour)}
+                title={`Jump to ${jump.label} (${jump.timeHint})`}
+              >
+                <span className="jump-label">{jump.label}</span>
+                <span className="jump-time">{jump.timeHint}</span>
+              </button>
+            ))}
+            {currentHour !== null && (
+              <button
+                type="button"
+                className="hour-jump-pill is-live-jump"
+                onClick={() => jumpToHour(currentHour)}
+                title="Jump to current live hour"
+              >
+                <span className="jump-live-dot" aria-hidden="true" />
+                <span className="jump-label">Now</span>
+              </button>
+            )}
+          </div>
         </div>
+
         <div className="minute-markers" aria-hidden="true">
           <span>:00</span>
           <span>:10</span>
@@ -122,7 +168,7 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
             currentBlockIndex !== null && group.blockIndices.includes(currentBlockIndex);
 
           return (
-            <div key={group.hour} className="hour-row">
+            <div key={group.hour} className="hour-row" data-hour-row={group.hour}>
               <button
                 type="button"
                 className={`hour-label-btn ${isHourSelected ? 'is-selected' : ''} ${isCurrentHour ? 'is-current-hour' : ''}`}
@@ -203,6 +249,7 @@ export const BlockGrid: React.FC<BlockGridProps> = ({
                               '--block-color': category.color,
                               '--block-bg': category.bgTint,
                               '--block-border': category.borderTint,
+                              '--block-glow': category.glowTint ?? 'rgba(56, 189, 248, 0.35)',
                             } as React.CSSProperties)
                           : undefined
                       }

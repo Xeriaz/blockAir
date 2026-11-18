@@ -19,6 +19,50 @@ interface SleepPrefillModalProps {
 const BEDTIME_PRESETS = ['22:00', '22:30', '23:00', '23:30', '00:00'];
 const WAKE_PRESETS = ['06:00', '06:30', '07:00', '07:30', '08:00'];
 
+interface SleepRoutinePreset {
+  id: string;
+  title: string;
+  badge: string;
+  startTime: string;
+  endTime: string;
+  label: string;
+}
+
+const SLEEP_ROUTINE_CARDS: SleepRoutinePreset[] = [
+  {
+    id: 'sleep-8h-standard',
+    title: '8h Sleep: 23:00–07:00',
+    badge: '48 blocks · 8h',
+    startTime: '23:00',
+    endTime: '07:00',
+    label: 'Night sleep',
+  },
+  {
+    id: 'sleep-75h-midnight',
+    title: '7.5h Sleep: 00:00–07:30',
+    badge: '45 blocks · 7h 30m',
+    startTime: '00:00',
+    endTime: '07:30',
+    label: 'Night sleep',
+  },
+  {
+    id: 'sleep-8h-early',
+    title: 'Early Riser: 22:00–06:00',
+    badge: '48 blocks · 8h',
+    startTime: '22:00',
+    endTime: '06:00',
+    label: 'Early night sleep',
+  },
+  {
+    id: 'sleep-8h-late',
+    title: 'Late Owl: 01:00–09:00',
+    badge: '48 blocks · 8h',
+    startTime: '01:00',
+    endTime: '09:00',
+    label: 'Late night sleep',
+  },
+];
+
 export const SleepPrefillModal: React.FC<SleepPrefillModalProps> = ({
   isOpen,
   onClose,
@@ -88,9 +132,34 @@ export const SleepPrefillModal: React.FC<SleepPrefillModalProps> = ({
 
         <form onSubmit={handleSubmit} className="modal-form">
           <p className="modal-desc">
-            Select your bedtime and wake time. Blocks crossing midnight are mapped seamlessly onto
-            your 24-hour grid.
+            Tap a 1-tap sleep routine or fine-tune bedtime and wake time. Midnight-crossing ranges
+            map cleanly across your 144 blocks.
           </p>
+
+          <div className="routine-presets-section">
+            <span className="field-label">1-Tap Sleep Routines</span>
+            <div className="routine-card-grid" role="group" aria-label="1-Tap Sleep Routines">
+              {SLEEP_ROUTINE_CARDS.map((routine) => {
+                const isSelected =
+                  startTime === routine.startTime && endTime === routine.endTime;
+                return (
+                  <button
+                    key={routine.id}
+                    type="button"
+                    className={`routine-card ${isSelected ? 'active' : ''}`}
+                    onClick={() => {
+                      setStartTime(routine.startTime);
+                      setEndTime(routine.endTime);
+                      setLabel(routine.label);
+                    }}
+                  >
+                    <span className="routine-card-title">{routine.title}</span>
+                    <span className="routine-card-meta">{routine.badge}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="time-select-grid">
             <div className="time-field-box">
